@@ -1,0 +1,21 @@
+# 系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 本地备份
+*.bak
+
+# Android 打包工程里的构建产物与依赖
+mobile/node_modules/
+mobile/www/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.idea/
+mobile/android/local.properties
+mobile/android/app/src/main/assets/public/

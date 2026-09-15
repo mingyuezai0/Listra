@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 模板原本是 Capacitor 那套蓝紫渐变；应用的主题里没有蓝紫，这里跟着换成主色纯色。
+     自适应图标（mipmap-anydpi-v26）走的是 @color/ic_launcher_background，不是这个文件。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#16C79A" />
+</shape>
