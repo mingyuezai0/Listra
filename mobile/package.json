@@ -1,6 +1,6 @@
 {
   "name": "listra-mobile",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "听雨 Listra —— 本地无损音视频播放器 Android 版（Capacitor 封装网页版）",
   "main": "index.js",
   "scripts": {

@@ -9,10 +9,26 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- BridgeActivity 在 onCreate 里 setTheme(R.style.AppTheme_NoActionBar)，
+         而 app 模块的资源会盖掉 Capacitor 库同名的那份（库那份的 parent 是
+         Theme.AppCompat.NoActionBar，深色），所以这一份才是真正生效的主题。
+         下面四条全是"让系统那两条栏跟软件的白底薄荷对上"：
+         - windowBackground：API 35+ 强制 edge-to-edge 之后，状态栏/导航栏是透明的，
+           透出来的是 decorView 的 windowBackground；SystemBars.setStyle() 也会
+           把它重设成这个属性（SystemBars.java 里 setBackgroundColor 那行）。
+           不改它，深色主题的 #303030 会从顶上透出一条灰边。
+         - statusBarColor / navigationBarColor：API 35 以下没有强制 edge-to-edge，
+           这两条栏是实心的，默认吃的是主题的 colorPrimaryDark（库里的值是靛蓝
+           #303F9F）—— 一条蓝紫色的顶栏，跟软件半点不像。这里改成软件的纸色。
+         - windowLightStatusBar：深色图标。默认 false = 浅色图标，白底上看不见。 -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <item name="android:windowBackground">#FFF6FAF8</item>
+        <item name="android:statusBarColor">#FFF6FAF8</item>
+        <item name="android:navigationBarColor">#FFF6FAF8</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
 

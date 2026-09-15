@@ -69,6 +69,26 @@ body{
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input{font:inherit;color:inherit}
 ::selection{background:var(--mint-200);color:var(--ink)}
+
+/* --- 滚动条一律不画 ---
+   应用自己这些可滚的区域全部藏掉滚动条：内容照样滚，滚轮、触摸、方向键、
+   拖到边缘自动滚都不受影响，只是不再有一条灰杠子杵在那儿。
+   桌面端那条最显眼（#stage 贴着窗口右缘一整条），跟这套"像测量仪器"的界面
+   最不搭；手机浏览器的滚动条本来就是浮层、不滚不显示，所以这一条主要是电脑上看得出来。
+   两根老写法 + 一根标准写法：桌面壳和 Chrome/Edge 认 ::-webkit-scrollbar，
+   Firefox 认 scrollbar-width。
+   ⚠️ 歌词编辑那个 textarea 故意不在名单里 —— 输入框里没有滚动条，
+   写长歌词时会不知道下面还有没有字。 */
+.stage, .sidebar, .about-scroll, .lyric-body, .dup-list, .pick-list,
+#plPanel, #rulePanel, #markPanel, #addMenu, #filterMenu, #searchDrop{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.stage::-webkit-scrollbar, .sidebar::-webkit-scrollbar, .about-scroll::-webkit-scrollbar,
+.lyric-body::-webkit-scrollbar, .dup-list::-webkit-scrollbar, .pick-list::-webkit-scrollbar,
+#plPanel::-webkit-scrollbar, #rulePanel::-webkit-scrollbar, #markPanel::-webkit-scrollbar,
+#addMenu::-webkit-scrollbar, #filterMenu::-webkit-scrollbar,
+#searchDrop::-webkit-scrollbar{width:0;height:0}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .micro{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 :focus-visible{outline:2px solid var(--mint-600); outline-offset:2px; border-radius:4px}
@@ -92,6 +112,26 @@ input{font:inherit;color:inherit}
   padding:var(--sat) calc(18px + var(--sar)) 0 calc(18px + var(--sal));
   background:var(--surface); border-bottom:1px solid var(--line); z-index:30;
 }
+/* --- 电脑端（Electron 壳）独有的两条 ---
+   壳里的系统标题栏整个去掉了（连"小图标 + 听雨"一起去掉），只留右上角三颗
+   最小化/最大化/关闭，由 titleBarOverlay 画在网页上面。于是：
+   ① 顶栏右侧要让开那三颗，不然「添加文件」正好被压住。
+      宽度不写死 —— Windows 的按钮宽跟着 DPI 缩放，写 140px 在高分屏上就不够了。
+      env(titlebar-area-*) 是 Chromium 专门为 Window Controls Overlay 给的，
+      语义就是"系统没占的那块"，换算成右内边距天然跟 DPI 走。
+   ② 系统标题栏没了，窗口总得有个地方能拖。顶栏就是它。
+      里面能点的东西（按钮、搜索框）必须显式 no-drag，否则它们在拖拽区里
+      既拖不动窗口、也点不着。
+   只在 html.is-electron 下生效：同一份 HTML 还要发网页和安卓，
+   那两处没有 overlay，让出 140px 就是白空一块。标记由桌面壳的 preload 打。 */
+html.is-electron .topbar{
+  padding-right:calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%) + 6px);
+  -webkit-app-region:drag;
+}
+html.is-electron .topbar button,
+html.is-electron .topbar input,
+html.is-electron .topbar a,
+html.is-electron .topbar label{-webkit-app-region:no-drag}
 /* 品牌区在宽屏只是个标记（侧栏一直开着），窄屏它才是抽屉的开关 ——
    所以样式保持中性，只在窄屏给手感。 */
 .brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;
@@ -470,6 +510,9 @@ input{font:inherit;color:inherit}
 .fs-btn.big:hover{background:var(--mint-600)}
 .fs-time{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;opacity:.88;white-space:nowrap}
 .fs-spacer{margin-left:auto}
+/* 逐帧那两颗：和播放台上的 .deck-frames 同一个排法 —— 圆按钮之间收窄到 4px，
+   跟左边那颗「播放设置」之间由 .fs-row 的 12px gap 拉开，别紧贴。 */
+.fs-frames{display:flex;align-items:center;gap:4px}
 
 /* 锁定钮。和「快进读数」一样故意不住在 .fs-top/.fs-bottom 里面 ——
    那两块会被 .fs-off 整块淡掉，而锁上之后恰恰只剩它要留在屏幕上。
@@ -724,9 +767,14 @@ input{font:inherit;color:inherit}
 #rdHint{margin:14px 0 0;font-family:var(--mono);font-size:12px;color:var(--ink-3);
   font-variant-numeric:tabular-nums}
 
-/* 「播放列表」下拉。宽度写死，理由同 #addMenu —— 定 left/top 之前量不到真宽度。 */
+/* 「播放列表」下拉。宽度写死，理由同 #addMenu —— 定 left/top 之前量不到真宽度。
+   z-index 是 170 不是别的浮层那样的 150：#vinyl 也是 150，两个都是 body 下的
+   position:fixed，同档就按文档序画 —— 而 #vinyl 排在后面，于是唱片页一开，
+   播放列表就被它整个盖住，"在唱片页里点播放列表什么也看不见"。
+   抬到 170：高过唱片页(150)和浮起来的播放台(body.vinyl-on .deck 的 160)，
+   又低于拖放遮罩(200)、弹窗(220)和 toast(300)。 */
 #plPanel{
-  position:fixed;z-index:150;width:min(310px,calc(100vw - 16px));max-height:min(62vh,440px);overflow-y:auto;
+  position:fixed;z-index:170;width:min(310px,calc(100vw - 16px));max-height:min(62vh,440px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
   box-shadow:var(--sh-pop);padding:6px;
 }
@@ -742,7 +790,7 @@ input{font:inherit;color:inherit}
 .pl-sort .fbtn{flex:1 1 auto;justify-content:flex-start;min-width:0}
 .pl-row{
   display:grid;grid-template-columns:auto 30px minmax(0,1fr) auto;
-  align-items:center;gap:10px;height:52px;padding:0 10px 0 6px;border-radius:var(--r-sm);
+  align-items:center;gap:10px;min-height:52px;padding:7px 10px 7px 6px;border-radius:var(--r-sm);
   background:var(--surface);position:relative;will-change:transform;
   /* 整行都能抓（行里没有"点一下"的动作）。但**不能**写 touch-action:none ——
      那样子指在行上就没法滑着滚这个面板了；触摸走的是长按 200ms 起拖。 */
@@ -757,10 +805,23 @@ input{font:inherit;color:inherit}
   display:grid;place-items:center;flex:0 0 auto}
 .pl-art img{width:100%;height:100%;object-fit:cover;display:block}
 .pl-art .glyph{color:var(--mint-500);opacity:.5;width:17px;height:17px}
-.pl-name{font-size:13px;font-weight:600;letter-spacing:-.01em;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.pl-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;
-  white-space:nowrap;flex:0 0 auto}
+/* 文件名和作者各占一行。原来两个挤在同一行的两列里（名字一列、作者和时长一列），
+   中文名长一点就双双被省略号截断，谁也读不全。现在名字在上、作者在下，
+   时长单独靠右一列 —— 三样都还在，只是不再互相抢地方。
+   两行都装了 setTitle：装不下就自己来回滚，滚起来的时候由这两颗盒子负责裁。 */
+.pl-txt{display:flex;flex-direction:column;justify-content:center;gap:1px;
+  min-width:0;overflow:hidden}
+.pl-name{display:block;font-size:13px;font-weight:600;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pl-sub{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;min-width:0}
+/* 没填作者的条目第二行完全是空的，留着会把名字顶到上半格去 —— 直接不占位 */
+.pl-sub:empty{display:none}
+/* 时长。原来是并进作者那一行的（「周杰伦 · 04:21」），分两行之后它自己站一列，
+   等宽字 + tabular-nums，一列对齐。 */
+.pl-dur{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
 .pl-row.dragging{z-index:5;border-radius:var(--r-md);box-shadow:var(--sh-lift);cursor:grabbing}
 .pl-row.dragging .pl-grip{opacity:.85}
 .pl-row.shifting{transition:transform 180ms cubic-bezier(.34,1.4,.5,1)}
@@ -1602,6 +1663,25 @@ body.vinyl-wide #lyricBackBtn{display:none}
                   <circle cx="13.2" cy="6" r="2.1"/><circle cx="7.2" cy="14" r="2.1"/>
                 </svg>
               </button>
+              <!-- 逐帧。位置照播放台上那两颗摆 —— 都在时间读数左边，隔着一段。
+                   这里不用像播放台那样判"是不是视频"：全屏层本来就只对视频开
+                   （fsActive() 要求 playingVideo()），能看见这条就是视频。 -->
+              <div class="fs-frames" id="fsFrames">
+                <button class="fs-btn" id="fsFrameBack" title="上一帧" aria-label="上一帧">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15.5 4.6v10.8L7.8 10z" fill="currentColor" stroke-width="1.2"/>
+                    <path d="M4.8 4.6v10.8"/>
+                  </svg>
+                </button>
+                <button class="fs-btn" id="fsFrameFwd" title="下一帧" aria-label="下一帧">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4.5 4.6v10.8L12.2 10z" fill="currentColor" stroke-width="1.2"/>
+                    <path d="M15.2 4.6v10.8"/>
+                  </svg>
+                </button>
+              </div>
               <span class="fs-time" id="fsTime">00:00 / 00:00</span>
             </div>
           </div>
@@ -1962,11 +2042,10 @@ body.vinyl-wide #lyricBackBtn{display:none}
     </div>
     <div class="set-row">
       <span class="set-label" id="setWhereLabel">文件位置</span>
-      <!-- 占位：用户说了先摆着、以后再做。做成 disabled 而不是点了弹「敬请期待」，
-           免得像个坏了的功能。 -->
+      <!-- 按钮上的字和下面那段说明三端各一套，由 syncWhereUI() 填 ——
+           同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。 -->
       <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
-      <p class="set-note">还没做。网页版里音视频是存进浏览器自己的库里的，系统里并没有
-        一个对应的文件夹能打开；等打包成桌面版再接系统的「在文件夹中显示」。</p>
+      <p class="set-note" id="whereNote"></p>
     </div>
     <div class="modal-actions"><button class="btn primary" id="setClose">完成</button></div>
   </div>
@@ -3326,7 +3405,33 @@ const GRIP = `<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor
 const MORE_DOTS = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
   <circle cx="8" cy="3.4" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="12.6" r="1.4"/></svg>`;
 
-const artOf = m => m.coverUrl ? `<img src="${m.coverUrl}" alt="">` : (m.kind === "audio" ? ART_AUDIO : ART_VIDEO);
+/* 音频没有封面时用的默认封面。
+   零外部依赖 —— 现画一张 SVG，编成 data URI 直接当 <img src>。
+   画的是一个薄荷渐变的底 + 一枚深薄荷的音符，和白色的唱片盘心。
+   刻意画成"填充的实心图形"而不是描边：卡片上只有 30~46px，描边在这个尺寸上会糊成灰雾。
+   走 <img> 不走内联 <svg>，是因为每一处美术容器（.card-art / .m-art / .pl-art / .if-art /
+   .pk-art / .rank-art / .sd-art / .deck-art / .disc-label）本来就都写好了
+   `img{width:100%;height:100%;object-fit:cover}` —— 换成 <img> 一个容器的 CSS 都不用动。 */
+const DEFAULT_COVER = "data:image/svg+xml," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">`
++ `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
++ `<stop offset="0" stop-color="#E4F8F1"/><stop offset="1" stop-color="#C6F0E1"/>`
++ `</linearGradient></defs>`
++ `<rect width="240" height="240" fill="url(#g)"/>`
++ `<circle cx="120" cy="120" r="76" fill="#FFFFFF" opacity=".55"/>`
++ `<g fill="#0FA47F" transform="translate(-7 3)">`
++ `<rect x="103" y="62" width="9" height="112" rx="4.5"/>`
++ `<rect x="173" y="46" width="9" height="112" rx="4.5"/>`
++ `<path d="M103 62 182 46v20l-79 16z"/>`
++ `<ellipse cx="92" cy="172" rx="21" ry="16" transform="rotate(-20 92 172)"/>`
++ `<ellipse cx="162" cy="156" rx="21" ry="16" transform="rotate(-20 162 156)"/>`
++ `</g></svg>`);
+const DEFAULT_COVER_ART = `<img src="${DEFAULT_COVER}" alt="">`;
+
+// 视频没有封面仍然是那个线画的胶片图标 —— 视频自己有画面，退出时会拿一帧当封面，
+// 用不上默认图。用户要的默认封面是给音频的。
+const artOf = m => m.coverUrl ? `<img src="${m.coverUrl}" alt="">`
+                : (m.kind === "audio" ? DEFAULT_COVER_ART : ART_VIDEO);
 // 「索引」和「待授权」都是"文件不在手边"，但一个是当初就这么选的，一个是丢了授权。
 // 用同一颗药丸的形状、换个词，用户一眼能分出来。
 const pillsOf = (m, playing) =>
@@ -3791,8 +3896,8 @@ function renderDeckSub(m){
   $("deckSub").innerHTML = `<span class="micro">${esc(bits.join(" · "))}</span>${pill}`;
 }
 function renderArt(m){
-  $("deckArt").innerHTML = m.coverUrl ? `<img src="${m.coverUrl}" alt="">`
-                                      : (m.kind === "audio" ? ART_AUDIO : ART_VIDEO);
+  // 和卡片/列表/播放列表同一个 artOf —— 播放台上那张小图不该有自己一套兜底
+  $("deckArt").innerHTML = artOf(m);
 }
 
 function togglePlay(){
@@ -4415,6 +4520,7 @@ let rollTimer = 0;
 addEventListener("resize", () => {
   clearTimeout(rollTimer);
   rollTimer = setTimeout(() => {
+    rollPlText();                       // 播放列表开着的话，宽度变了得按新宽度重量一遍
     if (!player.current) return;
     setTitle($("deckTitle"), titleOf(player.current));
     if (fsActive()) setTitle($("fsTitle"), titleOf(player.current));
@@ -4988,9 +5094,10 @@ function renderVinyl(){
   $("vinylTitle").textContent  = m ? titleOf(m) : "未在播放";
   $("vinylArtist").textContent = m ? artistOf(m) : "";
   const lab = $("discLabel");
-  // 中心那圈标签：有封面就贴封面，没有就是一整块薄荷色。
-  lab.innerHTML = (m && m.coverUrl) ? `<img src="${m.coverUrl}" alt="">` : "";
-  lab.classList.toggle("empty", !(m && m.coverUrl));
+  // 中心那圈标签贴的是和卡片上同一张图 —— 有封面用封面，没有用那张默认封面。
+  // 从前没有封面时这里是空的，整块薄荷色，和卡片上的音符图标对不上。
+  lab.innerHTML = m ? artOf(m) : "";
+  lab.classList.toggle("empty", !m);
   $("vinylCard").classList.toggle("flip", vinylFlipped);
   $("vinylFront").setAttribute("aria-pressed", vinylFlipped ? "true" : "false");
   syncVinylWide();
@@ -5253,6 +5360,11 @@ function toggleFull(){
 $("btnFull").addEventListener("click", toggleFull);
 $("btnFrameBack").addEventListener("click", () => stepFrame(-1));
 $("btnFrameFwd").addEventListener("click",  () => stepFrame(1));
+// 全屏里那两颗跟播放台上的是同一个 stepFrame。**不调 fsReveal()** ——
+// 逐帧要连按好几下，每按一下把浮动条重新亮一遍（还重置自动收起的计时）
+// 反而看不见画面，安静地走帧就行。
+$("fsFrameBack").addEventListener("click", () => stepFrame(-1));
+$("fsFrameFwd").addEventListener("click",  () => stepFrame(1));
 document.addEventListener("fullscreenchange", syncFullUI);
 document.addEventListener("webkitfullscreenchange", syncFullUI);
 // 转屏之后尺寸才真正定下来，所以等一拍再排版，别拿转之前那套尺寸白算一遍
@@ -5620,7 +5732,7 @@ function reallyRemoveItems(list){
     wave.peaks = null; wave.key = null;
     setTitle($("deckTitle"), "未在播放");
     $("deckSub").innerHTML = `<span class="micro">导入文件后开始</span>`;
-    $("deckArt").innerHTML = ART_AUDIO;
+    $("deckArt").innerHTML = DEFAULT_COVER_ART;      // 空载也摆那张默认封面，别留个黑洞
     clipA = clipB = null; clipAt = -1;
     closeVinyl(); hidePeek();
     $("frameBtns").toggleAttribute("hidden", true);
@@ -5698,6 +5810,7 @@ $("navSettings").addEventListener("click", () => {
   syncResumeUI();
   syncImportUI();
   setImpHelp(false);
+  syncWhereUI();               // 「文件位置」那一行按平台现填（壳 / 安卓 / 网页各一套）
   $("setModal").hidden = false;
 });
 $("setClose").addEventListener("click", () => { $("setModal").hidden = true; });
@@ -6202,9 +6315,27 @@ function plRowHTML(m){
         </svg>
       </span>
       <span class="pl-art">${artOf(m)}</span>
-      <span class="pl-name">${esc(titleOf(m))}</span>
-      <span class="pl-sub">${esc([t.artist, fmtTime(m.duration)].filter(Boolean).join(" · "))}</span>
+      <span class="pl-txt">
+        <span class="pl-name">${esc(titleOf(m))}</span>
+        <span class="pl-sub">${esc(t.artist || "")}</span>
+      </span>
+      <span class="pl-dur">${m.duration ? fmtTime(m.duration) : ""}</span>
     </div>`;
+}
+
+/* 名字/作者长了就来回滚（复用播放台那套 setTitle）。
+   ⚠️ 必须在**面板已经露出来**之后调 —— setTitle 头一句是 box.clientWidth，
+   而 renderPlPanel() 是在 plPanel.hidden 还是 true 的时候跑的，那时候量到的是 0，
+   它会当成"还没上屏"直接返回，一个字都不会滚。所以 renderPlPanel 里那句要判 visible，
+   openPlPanel 里则是在 hidden = false 之后单独补一发。 */
+function rollPlText(){
+  if (plPanel.hidden) return;
+  plPanel.querySelectorAll(".pl-row").forEach(row => {
+    const m = store.byId.get(row.dataset.pl);
+    if (!m) return;
+    setTitle(row.querySelector(".pl-name"), titleOf(m));
+    setTitle(row.querySelector(".pl-sub"), artistOf(m));
+  });
 }
 
 function renderPlPanel(){
@@ -6224,6 +6355,7 @@ function renderPlPanel(){
         : `<div class="pl-empty">这一列还是空的。点旁边的「从资料库添加」挑几首进来。</div>`);
   bindSortBtn(plPanel, box);
   plPanel.scrollTop = st;          // 换完顺序别把面板弹回顶部
+  rollPlText();                    // 面板本来就开着时（换排序、拖完重排）当场把长名字滚起来
 }
 // 面板顶上那颗排序按钮：再点一次换方向，点别的换尺子。
 function bindSortBtn(host, box){
@@ -6264,6 +6396,7 @@ function openPlPanel(){
   const btn = $("btnSetPlaylist");
   btn.setAttribute("aria-expanded", "true");
   placePlPanel();
+  rollPlText();         // 露出来了才量得到宽度 —— renderPlPanel 里那发是空过的
 
   renderAll();          // 标题旁那个「当前播放列表」小标
   saveLibrary();
@@ -7050,9 +7183,23 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.1";
+const APP_VERSION = "0.1.2";
 
 const CHANGELOG = [
+  { v: "0.1.2", date: "2026-09-15", title: "返回键、状态栏与文件位置",
+    items: [
+      "安卓返回键：真修好了 —— 上一版那段监听压根没挂上，返回和退出确认都没反应",
+      "状态栏：跟着软件走，白底深色图标，不再是一条蓝紫色的杠",
+      "电脑端：窗口顶上那行「图标 + 听雨」去掉了，只留最小化/最大化/关闭",
+      "设置：文件位置真能打开了，电脑端开文件夹、手机端开应用信息",
+      "关于：GitHub、哔哩哔哩、QQ 群三个链接接通了",
+      "全屏：视频全屏时也能帧退帧进，跟播放台上那两颗一样",
+      "播放列表：文件名和作者分成两行，太长的自己来回滚",
+      "播放列表：开唱片页时也能看见了，从前被唱片页盖在底下",
+      "音频：没有封面就用默认封面，唱片中心那圈也是同一张",
+      "卸载：会先问一句要不要连保存的数据一起删",
+      "界面：滚动条藏起来了，不再有一条灰杠子杵在右边",
+    ] },
   { v: "0.1.1", date: "2026-09-15", title: "手机端打磨",
     items: [
       "手机顶栏：添加文件收成一个绿圆加号，不再拖一条小三角",
@@ -7075,12 +7222,13 @@ const CHANGELOG = [
     ] },
 ];
 
-/* 外链。**现在一个 URL 都没有**，四个都是占位 ——
-   点一下只说一句"敬请期待"。以后要接，把 url 填上就行，别的都不用动。 */
+/* 外链。点一下 window.open，桌面壳里的 setWindowOpenHandler 会把它交给系统浏览器，
+   手机上是系统浏览器接管 —— 三端一条路走到底。
+   「官方网站」还空着：没有这个站点，点了仍然只说一句"敬请期待"。 */
 const ABOUT_LINKS = [
-  { id: "aboutGithub", label: "GitHub", url: "" },
-  { id: "aboutBili",   label: "哔哩哔哩", url: "" },
-  { id: "aboutQQ",     label: "QQ群",   url: "" },
+  { id: "aboutGithub", label: "GitHub", url: "https://github.com/mingyuezai0/Listra" },
+  { id: "aboutBili",   label: "哔哩哔哩", url: "https://space.bilibili.com/498726578" },
+  { id: "aboutQQ",     label: "QQ群",   url: "https://qm.qq.com/q/JY41MrDQQy" },
   { id: "aboutSite",   label: "官方网站", url: "" },
 ];
 
@@ -7213,19 +7361,51 @@ addEventListener("keydown", e => {
         压栈这件事在 navTo() 里做，这儿只管"按下去该发生什么"。
    ---- 只装 @capacitor/app，不碰别的插件。
    ============================================================ */
-/* 网页版 / Electron 里没有 @capacitor/app 这个插件，整段直接跳过。
-   真在安卓上跑时，Capacitor 的 PluginHeaders 里才有 "App"，
-   addListener 才会走到原生那一条路（网页上是 rejected promise，不是同步抛）。 */
+/* ⚠️⚠️ 取插件**不能**用 CAP.registerPlugin("App")。
+   registerPlugin 住在 @capacitor/core 那个 JS 包里，而这个应用是"单文件、零依赖"——
+   assets/public 下只有一个 index.html，没有 capacitor.js，所以那个函数运行时压根不存在。
+   原生桥注入的 window.Capacitor 只有三样：{ DEBUG, isLoggingEnabled, Plugins }；
+   每个插件在 Plugins 下有个同名对象，身上挂着 addListener 和它自己的 @PluginMethod
+   （JSExport.getGlobalJS / getPluginJS，注入点在 <head> 之后、本脚本之前，所以这里一定已经就绪）。
+   旧代码那句 registerPlugin 抛 TypeError 被 catch 吞掉、CapApp 恒为 null，
+   于是 addListener 一次都没调过 —— 表现就是"返回键没反应、退出问一句也没反应"。
+   @capacitor/app 在 capacitor.plugins.json 里，所以 Plugins.App 一定有。 */
 const CAP = window.Capacitor;
 const onNative = !!(CAP && typeof CAP.isNativePlatform === "function" && CAP.isNativePlatform());
-let CapApp = null;
-if (onNative){
-  try { CapApp = CAP.registerPlugin("App"); } catch (e){ CapApp = null; }
-}
+// ⚠️ 这三颗（连同下面的 shellBridge）写 let 不写 const：三端分支没法在无头里真跑，
+//    套件是把它们换成桩来验"电脑端/安卓端各走哪条路"的。换成 const 的话
+//    那一整段就只能靠读源码来验，等于没验。
+let CapApp = (onNative && CAP.Plugins) ? (CAP.Plugins.App || null) : null;
+// SystemBars 是 Capacitor 内核自带的，不在 plugins.json 里（Bridge.registerAllPlugins
+// 无条件注册），但 Plugins 下一样有它。
+let CapBars = (onNative && CAP.Plugins) ? (CAP.Plugins.SystemBars || null) : null;
+// AppInfo 是自己写的那颗（mobile/android/.../AppInfoPlugin.java），
+// MainActivity 在 super.onCreate 之前 registerPlugin 进来的。
+let CapInfo = (onNative && CAP.Plugins) ? (CAP.Plugins.AppInfo || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
-  try { CapApp.exitApp().catch(() => {}); } catch (e){}
+  try {
+    const r = CapApp.exitApp();          // 返回值可能是个 Promise，也可能什么都没有
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
+}
+
+/* 状态栏配色跟着软件走。
+   两处会让它对不上：
+   ① 设备开着深色模式时，SystemBars 默认那档 DEFAULT 是"读系统夜间模式"的
+      （getStyleForTheme），深色模式下会给**浅色图标** —— 而这个软件恒为白底薄荷，
+      浅色图标等于看不见；
+   ② 状态栏背后那层是 decorView 的 windowBackground，它来自主题，
+      Capacitor 库自带的主题是深色的，会透出一截灰（这一步在 styles.xml 里改）。
+   这里显式要 LIGHT —— 注意这名字是反的：LIGHT 指的是"浅色背景"，落下去是
+   setAppearanceLightStatusBars(true)，也就是**深色图标**。
+   不传 bar 就是状态栏和导航栏一起管，底部那条也一样是白底。 */
+if (CapBars){
+  try {
+    const r = CapBars.setStyle({ style: "LIGHT" });
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
 }
 
 function askExit(){
@@ -7257,8 +7437,69 @@ function handleBack(){
 }
 
 if (CapApp){
-  try { CapApp.addListener("backButton", () => handleBack()).catch(() => {}); } catch (e){}
+  try {
+    const r = CapApp.addListener("backButton", () => handleBack());
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
 }
+
+/* ============================================================
+   16.6 设置里的「文件位置」
+   ---- 同一份 HTML 要发三处（网页 / Windows 壳 / 安卓），这一行落到哪儿完全不同，
+        所以放在平台判定旁边，一处说了算。
+   ---- 电脑端：壳里的 preload 挂了 window.listra，主进程 shell.openPath 打开真正的
+        userData 文件夹（%APPDATA%\听雨）。渲染进程只喊一声，路径不传过去 ——
+        让渲染进程递路径进来，这颗按钮就成了"打开任意文件夹"了。
+   ---- 安卓：音视频存在应用私有目录里，任何文件管理器都进不去（Android 11 起
+        Android/data 整棵树对第三方应用关闭，系统自带的文件管理器也不行）。
+        这是系统的限制，不是没做。所以那颗按钮退一步，跳系统的「应用信息」页。
+   ---- 网页：没有壳，什么也打不开，按钮保持 disabled 并如实说明。
+   ============================================================ */
+const ANDROID_PKG = "com.mingyuezai0.listra";
+let shellBridge = (typeof window !== "undefined" && window.listra
+                   && typeof window.listra.revealUserData === "function") ? window.listra : null;
+
+function whereKind(){
+  if (shellBridge) return "desktop";
+  if (CapInfo) return "android";
+  return "web";
+}
+
+function syncWhereUI(){
+  const kind = whereKind();
+  const btn = $("btnWhere");
+  const note = $("whereNote");
+  btn.disabled = kind === "web";        // <button> 有 disabled 这个 IDL 属性，直接赋值就行
+  if (kind === "desktop"){
+    btn.textContent = "在文件夹中显示";
+    note.textContent = "正在读取位置…";
+    Promise.resolve()
+      .then(() => shellBridge.userDataPath())
+      .then(p => { note.textContent = p ? `存在这台电脑上：${p}` : "存在这台电脑的软件数据目录里。"; })
+      .catch(() => { note.textContent = "存在这台电脑的软件数据目录里。"; });
+  } else if (kind === "android"){
+    btn.textContent = "打开应用信息";
+    note.textContent = "音视频存在应用自己的私有目录里（/data/data/" + ANDROID_PKG + "/app_webview/），"
+      + "其他应用和文件管理器都进不去 —— 这是安卓的限制。上面那颗按钮会打开系统的"
+      + "「应用信息」，在那儿能看到占用了多少空间，也能清除数据。";
+  } else {
+    btn.textContent = "在文件夹中显示";
+    note.textContent = "网页版里音视频是存进浏览器自己的库里的，系统里并没有一个对应的文件夹"
+      + "能打开；打包成桌面版或手机版之后，这里就能直接打开了。";
+  }
+}
+
+$("btnWhere").addEventListener("click", () => {
+  const kind = whereKind();
+  const fail = () => toast(kind === "android" ? "打不开应用信息页" : "打不开文件夹");
+  try {
+    const r = kind === "desktop" ? shellBridge.revealUserData()
+            : kind === "android" ? CapInfo.openAppSettings()
+            : null;
+    if (r && r.catch) r.catch(fail);
+  } catch (e){ fail(); }
+});
+syncWhereUI();
 
 let toastTimer = 0;
 // act 给了就是一条"能点的提示"：多一颗按钮、多停一会儿、并且要能接住点击。
