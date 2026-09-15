@@ -43,11 +43,15 @@
   --top-h:56px;
   --side-w:224px;
 
-  /* 安全区：刘海、状态栏、虚拟 home 键。桌面端这四项都是 0。 */
-  --sat:env(safe-area-inset-top,0px);
-  --sar:env(safe-area-inset-right,0px);
-  --sab:env(safe-area-inset-bottom,0px);
-  --sal:env(safe-area-inset-left,0px);
+  /* 安全区：刘海、状态栏、虚拟 home 键。桌面端这四项都是 0。
+     安卓上优先吃 Capacitor 的 SystemBars 插件注进来的那一份（它默认就注册着，
+     拿真实 WindowInsets 每变一次写一次 documentElement）—— 内核报的
+     env(safe-area-inset-top) 在有些版本上是 0，靠它顶栏会钻到状态栏底下。
+     两个都有时以注入的那份为准，只取一个，不会重复扣。 */
+  --sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));
+  --sar:var(--safe-area-inset-right,env(safe-area-inset-right,0px));
+  --sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
+  --sal:var(--safe-area-inset-left,env(safe-area-inset-left,0px));
 }
 
 *{box-sizing:border-box}
@@ -925,6 +929,25 @@ input{font:inherit;color:inherit}
 .ed-field{display:block;margin-bottom:12px}
 .ed-label{display:block;margin-bottom:5px;font-family:var(--mono);font-size:9.5px;
   letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+/* 标签胶囊。用户要的是"一个个加、一个个删"，不是一整个逗号分隔的文本框。
+   外圈画成输入框的样子（点哪儿都是打字），里面是已加的胶囊 + 一个吃剩余宽度的
+   输入框 —— 所以没打字时它看着就是空的，打了字按回车就"变成一个"。
+   ⚠️ 三条 width/height/border 必须显式收回来：.modal-box input 是
+      width:100%;height:38px;padding:0 12px;border:1px solid —— 不管的话
+      这个内嵌输入框会把胶囊挤成两行，自己还比胶囊高一截。 */
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  min-height:38px;padding:6px 8px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--paper)}
+.chips:focus-within{border-color:var(--mint-500);background:var(--surface)}
+.chip{display:inline-flex;align-items:center;gap:3px;height:24px;max-width:100%;
+  padding:0 3px 0 9px;border-radius:999px;background:var(--mint-100);
+  border:1px solid var(--mint-200);color:var(--mint-700);font-size:12.5px}
+.chip-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.chip-x{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:18px;height:18px;border-radius:50%;color:var(--mint-700)}
+.chip-x:hover{background:var(--mint-200);color:var(--mint-700)}
+#edLabelIn{flex:1 1 90px;width:auto;min-width:90px;height:24px;padding:0;
+  border:0;border-radius:0;background:none;outline:none;font-size:13px;color:var(--ink)}
 .modal-box.wide{width:min(430px,100%)}
 #infoBody{margin-bottom:2px}
 .if-head{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;margin-bottom:14px}
@@ -1003,14 +1026,23 @@ input{font:inherit;color:inherit}
 .about-sec h4{margin:0 0 12px;font-size:12px;font-weight:650;letter-spacing:.2em;color:var(--ink-3)}
 .cl-list{display:flex;flex-direction:column;gap:12px}
 .cl-item{border-left:2px solid var(--mint-200);padding-left:12px}
-.cl-head{display:flex;align-items:baseline;gap:9px}
+/* 每一版一条，默认收着，点标题那一行展开。整行都是按钮 ——
+   光让那个小三角能点太小了，手指够不着。 */
+.cl-head{display:flex;align-items:baseline;gap:9px;width:100%;padding:2px 0;
+  text-align:left;border-radius:4px}
+.cl-head:hover .cl-title{color:var(--mint-600)}
 .cl-head b{font-family:var(--mono);font-size:12px;font-weight:650;color:var(--mint-700);
   font-variant-numeric:tabular-nums}
 .cl-date{font-family:var(--mono);font-size:11px;color:var(--ink-3);
   font-variant-numeric:tabular-nums}
-.cl-item ul{margin:7px 0 0;padding-left:15px;font-size:12.5px;line-height:1.85;color:var(--ink-2)}
-.cl-item li{margin-bottom:3px}
-.cl-item li:last-child{margin-bottom:0}
+/* 收着的时候拿标题当摘要 —— 只看这一行也知道这一版干了什么 */
+.cl-title{font-size:12.5px;color:var(--ink-2);transition:color .15s}
+.cl-caret{margin-left:auto;flex:0 0 auto;align-self:center;color:var(--ink-3);
+  transition:transform .2s cubic-bezier(.34,1.4,.5,1)}
+.cl-head[aria-expanded="true"] .cl-caret{transform:rotate(180deg)}
+.cl-body ul{margin:7px 0 0;padding-left:15px;font-size:12.5px;line-height:1.85;color:var(--ink-2)}
+.cl-body li{margin-bottom:3px}
+.cl-body li:last-child{margin-bottom:0}
 
 /* --- 设置：排列方式 --- */
 .set-row{margin-bottom:18px}
@@ -1312,6 +1344,9 @@ body.vinyl-wide #lyricBackBtn{display:none}
   .brand-name{display:none}
   .search{max-width:none}
   .top-actions .btn span{display:none}
+  /* 展开的三角也一起收掉：手机上这颗只剩一个绿圆 + 正中间的 +。
+     圆是 .btn.primary 给的底色，+ 是那颗 svg，靠 justify-content 居中。 */
+  .top-actions .btn-caret{display:none}
   .top-actions .btn{width:34px;padding:0;justify-content:center}
   /* 还是三列居中，但 46px 的封面在手机上会把标题挤成 0 宽 ——
      标题、传输键、喇叭三样都得留，先让封面下场（列表里的卡片上还有）。 */
@@ -1800,8 +1835,11 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <input id="edName" type="text" maxlength="120" autocomplete="off" placeholder="留空就用文件名"></label>
     <label class="ed-field"><span class="ed-label">作者</span>
       <input id="edArtist" type="text" maxlength="80" autocomplete="off" placeholder="比如歌手、播客、UP 主"></label>
-    <label class="ed-field"><span class="ed-label">标签</span>
-      <input id="edLabels" type="text" maxlength="200" autocomplete="off" placeholder="用逗号隔开，比如 摇滚, 现场"></label>
+    <div class="ed-field"><span class="ed-label" id="edLabelsLab">标签</span>
+      <div class="chips" id="edChips" role="group" aria-labelledby="edLabelsLab">
+        <input id="edLabelIn" type="text" maxlength="40" autocomplete="off"
+               placeholder="打字，回车加一个" aria-label="添加标签">
+      </div></div>
     <p class="modal-note">这些只写在软件里，磁盘上的文件一个字节都不动。</p>
     <div class="modal-actions">
       <button class="btn" id="edCancel">取消</button>
@@ -3605,12 +3643,23 @@ function qRowHTML(m, i){
 }
 
 /* ---- 导航 ---- */
-function navTo(kind, id = null){
-  // 从视频上离开就把它停住 —— 画面已经切走了，声音还在放很奇怪。
-  // 停之前先抽一帧：这就是"退出视频时的那一帧"。
+/* 返回栈：手机上那颗系统返回键要"回退到上一个页面"。网页里没有 history 可用
+   （这是个单文件 SPA，路由是自己拿 route 记的），所以在唯一的导航入口这儿记一笔。
+   别的给 route 赋值的地方都是"目标没了，退回音频页"的兜底，不是用户走的路。 */
+const routeStack = [];
+let routeBack = false;          // 这一趟是返回键触发的，不再往栈里压
+const ROUTE_MAX = 40;
+
+/* 离开视频页之前的三件事：把当前这一帧留下来当封面、停住、收掉帧预览。
+   返回键和 navTo 都要用 —— 返回键从视频页回列表时不改 route，走不了 navTo。 */
+function stopVideoForLeave(){
   if (playingVideo()) grabFrame(player.current, videoEl);
   if (playingVideo() && !activeEl.paused) activeEl.pause();
   hidePeek();
+}
+
+function navTo(kind, id = null){
+  stopVideoForLeave();
   closeVinyl();      // 去资料库翻歌单，不该被唱片页压着
   setDrawer(false);            // 手机上选完就该收起来，让位给内容
   closePlPanel();              // 换页了，上一页的播放列表别跟过来
@@ -3621,6 +3670,13 @@ function navTo(kind, id = null){
   filterArtist = ""; filterLabel = "";
   // 榜单也回到默认那一档（次数榜 · 累计），理由同上
   boardBy = "n"; boardWin = "all";
+  // 记下"这次是从哪儿来的"。原地再进一次不记 —— 在资料库上连点两下，
+  // 不该变成要按两次返回才出得去。
+  if (!routeBack && (route.kind !== kind || route.id !== id)){
+    routeStack.push({ kind: route.kind, id: route.id });
+    if (routeStack.length > ROUTE_MAX) routeStack.shift();
+  }
+  routeBack = false;
   route = { kind, id };
   // 进哪个待播，哪个就是当前播放列表（老规矩）。收藏夹不这样 ——
   // 它得在右上角点开「播放列表」才算数。
@@ -4369,10 +4425,19 @@ addEventListener("resize", () => {
    6e. 删除前的确认
    ============================================================ */
 let pendingConfirm = null;
+// 这个确认框是"要不要退出软件"那个（安卓返回键用的）。声明放在这儿而不是
+// 返回键那一段里 —— askConfirm 每次都要清它，搁在下头就有暂时性死区的风险。
+let exitAsked = false;
 function askConfirm(title, text, okLabel, onOk){
   $("cfTitle").textContent = title;
   $("cfText").textContent  = text;
   $("cfOk").textContent    = okLabel || "删除";
+  // 破坏性操作才穿珊瑚色（原来只有「移除/删除」）。「退出软件」那颗
+  // 在 askExit 里当场摘掉，所以每开一次都得先穿回去。
+  $("cfOk").classList.add("danger");
+  // ⚠️ 每开一个新的确认框就清掉"这是退出框"那一笔 —— 否则用户取消过退出、
+  // 后来又弹了个删除确认，按返回键会被当成"确认退出"直接把软件关了。
+  exitAsked = false;
   $("confirmModal").hidden = false;
   pendingConfirm = onOk;
 }
@@ -5008,15 +5073,19 @@ $("lyricBody").addEventListener("keydown", e => {
   else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); saveLyricEdit(); }
 });
 
-/* 点播放台回列表 —— 用户要的"退出这个页面可以点击正在播放音频的播放台回来"。
-   落在按钮 / 音量滑杆 / 播放轴上的点击不算：点播放暂停、拖进度、调音量
+/* 点播放台，开合唱片页 —— 一层两用，看它现在是开着还是关着。
+   关着的时候：正在放音频就把它唤回来（点了播放台空白处 = "我要看那张唱片"）。
+   开着的时候：揭掉它（用户要的"退出这个页面可以点击正在播放音频的播放台回来"）。
+   落在按钮 / 音量滑杆 / 播放轴上的点击两种都不算：点播放暂停、拖进度、调音量
    都是在这层还开着的时候该能干的活，不该顺手把整页掀掉。
    关的时候不调 navTo() —— 那会把 route、筛子、滚动位置全重置，
    这儿只要揭掉这层，底下的列表和滚动位置原样不动。 */
 document.querySelector(".deck").addEventListener("click", e => {
-  if ($("vinyl").hidden) return;
   if (e.target instanceof Element && e.target.closest("button, [role=slider], #waveArea, .vol")) return;
-  closeVinyl();
+  if (!$("vinyl").hidden){ closeVinyl(); return; }
+  // 只有音频有唱片页。视频/空载时播放台点击什么也不做（视频那条路是"点画面暂停"）。
+  const m = player.current;
+  if (m && m.kind === "audio") openVinyl(m);
 });
 
 /* ============================================================
@@ -5351,17 +5420,97 @@ function refreshPlayingTitle(m){
 }
 
 let editing = null;
+/* 正在编辑的标签。开弹窗时从 m.labels 抄一份出来改，按「保存」才写回去 ——
+   中途取消不该在文件上留下半个改动。 */
+let editLabels = [];
+
+/* 画胶囊。只重画胶囊那几颗，输入框本身留着不动（重画整个 innerHTML 会把
+   焦点和光标一起丢掉，连着加第二个标签就得重新点一下）。 */
+function renderEditLabels(){
+  const box = $("edChips"), inp = $("edLabelIn");
+  box.querySelectorAll(".chip").forEach(el => el.remove());
+  const frag = document.createDocumentFragment();
+  editLabels.forEach(t => {
+    const s = document.createElement("span");
+    s.className = "chip";
+    const tx = document.createElement("span");
+    tx.className = "chip-t";
+    tx.textContent = t;              // 用 textContent：标签里是什么字符都不用怕
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "chip-x";
+    x.setAttribute("aria-label", "删掉标签 " + t);
+    x.innerHTML = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none"'
+                + ' stroke="currentColor" stroke-width="1.8" aria-hidden="true">'
+                + '<path d="M3 3l6 6M9 3l-6 6" stroke-linecap="round"/></svg>';
+    s.append(tx, x);
+    frag.appendChild(s);
+  });
+  box.insertBefore(frag, inp);
+}
+/* 加"一个"。粘进来一串（逗号/顿号/分号隔开的）也照样拆开一个个加 ——
+   走的还是编辑详情一直在用的 parseLabels，分隔符和去重的规矩不另起一套。 */
+function addEditLabels(raw){
+  let added = false;
+  for (const t of parseLabels(raw)){
+    if (editLabels.includes(t)) continue;
+    if (editLabels.length >= 30) break;     // 别让一张卡片挂上几百个标签
+    editLabels.push(t); added = true;
+  }
+  return added;
+}
+// 把输入框里没回车的那一个收下（按「保存」时也要收，不然白打）
+function commitLabelInput(){
+  const inp = $("edLabelIn");
+  const added = addEditLabels(inp.value);
+  inp.value = "";
+  if (added) renderEditLabels();
+  return added;
+}
+
 function openEdit(m){
   editing = m;
   // 名字框里放 titleOf 而不是 m.renamed：用户看到的是"现在叫什么"，
   // 就算那名字是从文件里解析出来的，改一下也就覆盖了。
   $("edName").value = titleOf(m);
   $("edArtist").value = artistOf(m);
-  $("edLabels").value = labelsOf(m).join(", ");
+  editLabels = labelsOf(m).slice();
+  $("edLabelIn").value = "";
+  renderEditLabels();
   $("editModal").hidden = false;
   setTimeout(() => { $("edName").focus(); $("edName").select(); }, 30);
 }
-function closeEdit(){ $("editModal").hidden = true; editing = null; }
+function closeEdit(){
+  $("editModal").hidden = true;
+  editing = null;
+  editLabels = [];
+  $("edLabelIn").value = "";
+  renderEditLabels();
+}
+/* 标签框：回车 = "这一个加完了"，空框里退格 = 撤回上一个，点 × = 删那一个。
+   ⚠️ 回车必须 stopPropagation：下面挂在 #editModal 上的那个 keydown 把弹窗里
+   任何回车都当成"保存"，不拦住的话刚打完字整个弹窗就关掉了。 */
+$("edChips").addEventListener("keydown", e => {
+  if (e.target !== $("edLabelIn") || e.isComposing) return;
+  if (e.key === "Enter"){ e.preventDefault(); e.stopPropagation(); commitLabelInput(); }
+  else if (e.key === "Backspace" && !e.target.value && editLabels.length){
+    e.preventDefault(); editLabels.pop(); renderEditLabels();
+  }
+});
+// 打出逗号 / 顿号 / 分号就当这一个加完了 —— 跟粘一串是同一条路
+$("edChips").addEventListener("input", e => {
+  if (e.target === $("edLabelIn") && /[,，、;；]/.test(e.target.value)) commitLabelInput();
+});
+$("edChips").addEventListener("click", e => {
+  const x = e.target instanceof Element ? e.target.closest(".chip-x") : null;
+  if (!x) return;
+  const chip = x.closest(".chip");
+  const i = [...$("edChips").querySelectorAll(".chip")].indexOf(chip);
+  if (i < 0) return;
+  editLabels.splice(i, 1);
+  renderEditLabels();
+  $("edLabelIn").focus();
+});
 $("edCancel").addEventListener("click", closeEdit);
 $("edOk").addEventListener("click", () => {
   const m = editing;
@@ -5370,7 +5519,8 @@ $("edOk").addEventListener("click", () => {
   // 名字清空 = 退回文件名，不是"名字变成空字符串"（那卡片上就一片空白了）
   m.renamed = name && name !== m.name ? name : "";
   m.artist  = $("edArtist").value.trim();
-  m.labels  = parseLabels($("edLabels").value);
+  commitLabelInput();                    // 还在框里没回车的那一个也算数
+  m.labels  = editLabels.slice();
   refreshPlayingTitle(m);
   closeEdit();
   renderAll(); saveLibrary();
@@ -6898,11 +7048,20 @@ function walkEntry(entry, out){
    16. 关于
    ---- 布局照梦语的「关于」：标识 / 名字+版本 / 一句话 / 2×2 外链 / 更新日志。
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
-        不使用 0.1.10）—— 跟梦语同一条规矩，是第一个版本，所以现在只有一条。
+        不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.1.1";
 
 const CHANGELOG = [
+  { v: "0.1.1", date: "2026-09-15", title: "手机端打磨",
+    items: [
+      "手机顶栏：添加文件收成一个绿圆加号，不再拖一条小三角",
+      "唱片页：退出之后点一下播放台空白处，就把它唤回来",
+      "顶部状态栏：手机上顶栏不再钻到状态栏底下，跟之前适配 home 键同一条规矩",
+      "安卓返回键：一级一级往回退，退到没地方退了会问一句要不要退出软件",
+      "标签：改成一个个地加、一个个地删，不再挤在一个文本框里",
+      "更新日志：每一版都收起来，点标题那一行才展开",
+    ] },
   { v: "0.1.0", date: "2026-09-15", title: "第一个版本",
     items: [
       "无损播放：音频视频原文件存进本机，音质画质一个字节都不动",
@@ -6946,12 +7105,32 @@ function renderAbout(){
   $("aboutLinks").innerHTML = ABOUT_LINKS.map(l =>
     `<button class="about-btn" id="${l.id}" type="button">${ABOUT_ICONS[l.id] || ""}${esc(l.label)}</button>`
   ).join("");
-  $("clList").innerHTML = CHANGELOG.map(e => `
+  // 每一版一条，**默认全部收着** —— 用户要的"每个更新版本的日志都收起来，
+  // 点击查看详情"。标题那一行本身就是按钮（含标题、日期、三角），整行可点。
+  $("clList").innerHTML = CHANGELOG.map((e, i) => `
     <div class="cl-item">
-      <div class="cl-head"><b>v${esc(e.v)}</b><span class="cl-date">${esc(e.date)}</span></div>
-      <ul>${e.items.map(it => `<li>${esc(it)}</li>`).join("")}</ul>
+      <button class="cl-head" type="button" aria-expanded="false" aria-controls="clBody${i}">
+        <b>v${esc(e.v)}</b><span class="cl-date">${esc(e.date)}</span>
+        <span class="cl-title">${esc(e.title || "")}</span>
+        <svg class="cl-caret" width="11" height="11" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4.4 6.4 8 10l3.6-3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="cl-body" id="clBody${i}" hidden>
+        <ul>${e.items.map(it => `<li>${esc(it)}</li>`).join("")}</ul>
+      </div>
     </div>`).join("");
 }
+// 展开 / 收起。挂在容器上代理，重画一遍 innerHTML 也不用重新绑。
+$("clList").addEventListener("click", e => {
+  const head = e.target instanceof Element ? e.target.closest(".cl-head") : null;
+  if (!head) return;
+  const open = head.getAttribute("aria-expanded") === "true";
+  head.setAttribute("aria-expanded", open ? "false" : "true");
+  const body = head.parentElement.querySelector(".cl-body");
+  if (body) body.hidden = open;
+});
 renderAbout();
 
 $("aboutClose").addEventListener("click", closeAbout);
@@ -6972,25 +7151,37 @@ $("navAbout").addEventListener("keydown", e => {
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openAbout(); }
 });
 
+/* 从最上层往下依次关掉一层。关到了返回 true，全都关着返回 false。
+   Esc 和安卓的返回键共用这一份 —— 两处各写一条链迟早会分叉，
+   手机上按返回键收不掉的东西，用户会以为软件卡住了。 */
+function closeTopLayer(){
+  if (!$("aboutModal").hidden){ closeAbout(); return true; }
+  if (!$("confirmModal").hidden){ closeConfirm(); return true; }
+  if (!$("dupModal").hidden){ closeDup("cancel"); return true; }   // 关掉 = 取消导入，最保守的那个
+  if (!$("noticeModal").hidden){ $("noticeModal").hidden = true; return true; }
+  if (!$("pickModal").hidden){ closePicker(); return true; }
+  if (!$("editModal").hidden){ closeEdit(); return true; }
+  if (!$("infoModal").hidden){ closeInfo(); return true; }
+  if (!$("setModal").hidden){ $("setModal").hidden = true; return true; }
+  // 唱片页排在两个面板前面：它盖着整屏，看不见的下层不该抢先接走 Esc
+  if (!$("vinyl").hidden){ closeVinyl(); return true; }
+  if (!rulePanel.hidden){ closeRulePanel(); return true; }
+  if (!markPanel.hidden){ closeMarkPanel(); return true; }
+  if (!searchDrop.hidden){ closeSearchDrop(); return true; }
+  if (!filterMenu.hidden){ closeFilterMenu(); return true; }
+  if ($("sidebar").classList.contains("open")){ setDrawer(false); return true; }
+  // 这几个是浮层，Esc 原来在下面单独关它们；并进来之后返回键也认
+  if (!plPanel.hidden || !sortMenu.hidden || !queueMenu.hidden || !addFileMenu.hidden){
+    closePlPanel(); closeSortMenu(); closeQueueMenu(); closeAddFileMenu(); return true;
+  }
+  return false;
+}
+
 addEventListener("keydown", e => {
   const tag = (e.target.tagName || "").toLowerCase();
   if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
   if (e.key === "Escape"){
-    if (!$("aboutModal").hidden){ closeAbout(); return; }
-    if (!$("confirmModal").hidden){ closeConfirm(); return; }
-    if (!$("dupModal").hidden){ closeDup("cancel"); return; }        // 关掉 = 取消导入，最保守的那个
-    if (!$("noticeModal").hidden){ $("noticeModal").hidden = true; return; }
-    if (!$("pickModal").hidden){ closePicker(); return; }
-    if (!$("editModal").hidden){ closeEdit(); return; }
-    if (!$("infoModal").hidden){ closeInfo(); return; }
-    if (!$("setModal").hidden){ $("setModal").hidden = true; return; }
-    // 唱片页排在两个面板前面：它盖着整屏，看不见的下层不该抢先接走 Esc
-    if (!$("vinyl").hidden){ closeVinyl(); return; }
-    if (!rulePanel.hidden){ closeRulePanel(); return; }
-    if (!markPanel.hidden){ closeMarkPanel(); return; }
-    if (!searchDrop.hidden){ closeSearchDrop(); return; }
-    if (!filterMenu.hidden){ closeFilterMenu(); return; }
-    if ($("sidebar").classList.contains("open")){ setDrawer(false); return; }
+    if (closeTopLayer()) return;
   }
   // 有弹窗或面板开着的时候，其余快捷键一律让路
   if (!$("nameModal").hidden || !$("setModal").hidden || !$("pickModal").hidden
@@ -6999,12 +7190,9 @@ addEventListener("keydown", e => {
       || !addMenu.hidden || !rulePanel.hidden || !markPanel.hidden
       || !searchDrop.hidden || !filterMenu.hidden || !$("vinyl").hidden
       || !$("aboutModal").hidden) return;
-  // 播放列表 / 排序 / 新建待播这几个浮层开着的时候，空格和方向键别去动播放台，
-  // 只让 Escape 把它们收掉
-  if (!plPanel.hidden || !sortMenu.hidden || !queueMenu.hidden || !addFileMenu.hidden){
-    if (e.key === "Escape"){ closePlPanel(); closeSortMenu(); closeQueueMenu(); closeAddFileMenu(); }
-    return;
-  }
+  // 播放列表 / 排序 / 新建待播这几个浮层的收口已经并进 closeTopLayer() 了
+  // （上面那句 Escape 就把它们收掉了），这里只剩"空格和方向键别去动播放台"。
+  if (!plPanel.hidden || !sortMenu.hidden || !queueMenu.hidden || !addFileMenu.hidden) return;
   if (drag) return;
   switch (e.key){
     case " ": e.preventDefault(); togglePlay(); break;
@@ -7017,6 +7205,60 @@ addEventListener("keydown", e => {
                    $("setModal").hidden = true; break;
   }
 });
+
+/* ============================================================
+   16.5 安卓返回键
+   ---- 用户要的是"回退到上一个页面"，退到底了再问一句要不要退出软件。
+   ---- 网页里没有 history 可用（单文件 SPA，路由是自己拿 route 记的），所以
+        压栈这件事在 navTo() 里做，这儿只管"按下去该发生什么"。
+   ---- 只装 @capacitor/app，不碰别的插件。
+   ============================================================ */
+/* 网页版 / Electron 里没有 @capacitor/app 这个插件，整段直接跳过。
+   真在安卓上跑时，Capacitor 的 PluginHeaders 里才有 "App"，
+   addListener 才会走到原生那一条路（网页上是 rejected promise，不是同步抛）。 */
+const CAP = window.Capacitor;
+const onNative = !!(CAP && typeof CAP.isNativePlatform === "function" && CAP.isNativePlatform());
+let CapApp = null;
+if (onNative){
+  try { CapApp = CAP.registerPlugin("App"); } catch (e){ CapApp = null; }
+}
+
+function exitApp(){
+  if (!CapApp) return;
+  try { CapApp.exitApp().catch(() => {}); } catch (e){}
+}
+
+function askExit(){
+  askConfirm("退出听雨", "要退出听雨吗？听到哪儿都记着，下次打开接着放。", "退出", () => {
+    exitAsked = false;
+    exitApp();
+  });
+  exitAsked = true;          // 放在 askConfirm 之后 —— 它开头会把这一位清掉
+  // 「退出软件」不是「移除/删除」，不该穿珊瑚色那件衣服（全站只有那两个键穿）
+  $("cfOk").classList.remove("danger");
+}
+
+function handleBack(){
+  // 退出确认开着：这一下就当点了「退出」
+  if (exitAsked && !$("confirmModal").hidden){ exitAsked = false; exitApp(); return; }
+  // 1. 先一层一层收浮层（跟 Esc 同一条链）
+  if (closeTopLayer()) return;
+  // 2. 正在看视频，先退回列表 —— 这一步不动 route，所以不占返回栈
+  if ($("viewStage").classList.contains("active")){ stopVideoForLeave(); showList(); return; }
+  // 3. 回上一个页面
+  if (routeStack.length){
+    const r = routeStack.pop();
+    routeBack = true;        // 让 navTo 知道这趟是返回，别再压回来
+    navTo(r.kind, r.id);
+    return;
+  }
+  // 4. 没地方退了 —— 问一句
+  askExit();
+}
+
+if (CapApp){
+  try { CapApp.addListener("backButton", () => handleBack()).catch(() => {}); } catch (e){}
+}
 
 let toastTimer = 0;
 // act 给了就是一条"能点的提示"：多一颗按钮、多停一会儿、并且要能接住点击。

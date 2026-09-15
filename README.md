@@ -99,8 +99,8 @@
 想以**桌面软件**的方式用（双击 exe、独立窗口、桌面/开始菜单快捷方式）：
 
 - **两种产物**：
-  - `Listra-Setup-0.1.0.exe` —— **安装包**：可选安装目录，自动创建桌面 / 开始菜单快捷方式。
-  - `Listra-Portable-0.1.0.exe` —— **单文件便携版**：双击直接运行，不写注册表，拷到 U 盘也能带走。
+  - `Listra-Setup-0.1.1.exe` —— **安装包**：可选安装目录，自动创建桌面 / 开始菜单快捷方式。
+  - `Listra-Portable-0.1.1.exe` —— **单文件便携版**：双击直接运行，不写注册表，拷到 U 盘也能带走。
 - 打包工程独立放在 **`D:\electron-tingyu`**（不随仓库走，和 `D:\Capacitor` 一样的本地工具链模式）。安装好 Node.js 后在那个目录下执行：
   ```bash
   npm install      # 首次需要，装 electron / electron-builder
@@ -114,7 +114,7 @@
 仓库里的 `mobile/` 是现成的 Capacitor 打包工程，工具链统一放在 `D:\Capacitor\`（jdk / android-sdk / gradle / gradle-home）：
 
 - **一键出包**：双击 `D:\Capacitor\build-apk-listra.bat`，产物在
-  `mobile/android/app/build/outputs/apk/debug/Listra-0.1.0.apk`。
+  `mobile/android/app/build/outputs/apk/debug/Listra-0.1.1.apk`。
   （手动的话：`mobile/` 下先 `npm install`，再 `npm run sync`，最后 `gradle -p android assembleDebug`。）
 - 手机端是**另一套布局**：侧栏收成左上角滑出的抽屉，播放台重排，全屏有横屏 / 长按快进 / 防误触锁。
 - APK 是 **debug 包（未签名）**，安装时手机要允许「安装未知应用」。
@@ -128,6 +128,15 @@
 - 做不到的三件事：在线下载（绕不过 CORS）、录制、微信里播放 WebM（微信不认这个封装）。
 
 ## 更新日志
+
+### v0.1.1 · 2026-09-15 · 手机端打磨
+
+- **顶栏**：手机上「添加文件」收成一个绿圆加号，不再拖一条小三角
+- **唱片页**：退出之后点一下播放台空白处，就把它唤回来
+- **状态栏**：手机上顶栏不再钻到状态栏底下，跟之前适配 home 键同一条规矩
+- **安卓返回键**：一级一级往回退，退到没地方退了会问一句要不要退出软件
+- **标签**：改成一个个地加、一个个地删，不再挤在一个文本框里
+- **更新日志**：「关于」里每一版都收起来，点标题那一行才展开
 
 ### v0.1.0 · 2026-09-15 · 第一个版本
 
