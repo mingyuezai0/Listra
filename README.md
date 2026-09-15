@@ -115,6 +115,7 @@
 
 - **一键出包**：双击 `D:\Capacitor\build-apk-listra.bat`，产物在
   `mobile/android/app/build/outputs/apk/debug/Listra-0.1.0.apk`。
+  （手动的话：`mobile/` 下先 `npm install`，再 `npm run sync`，最后 `gradle -p android assembleDebug`。）
 - 手机端是**另一套布局**：侧栏收成左上角滑出的抽屉，播放台重排，全屏有横屏 / 长按快进 / 防误触锁。
 - APK 是 **debug 包（未签名）**，安装时手机要允许「安装未知应用」。
 
