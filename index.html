@@ -256,6 +256,11 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
    收藏夹/待播后面还跟着药丸和按钮，那时它不推，跟着标题走。
    （标题栏里原来还有一颗排序按钮，现在搬进「播放列表」下拉了，见 .pl-sort。） */
 .view-head > .view-sub:last-child{margin-left:auto}
+/* 电脑端顶栏那三颗按钮搬进来之后住的盒子（手机端它们回顶栏，这个盒子不存在）。
+   它永远是标题栏的最后一个孩子，所以靠右站是它自己挣的，跟上面那条 :last-child
+   无关 —— 也正因为多了它，资料库那两页的读数不再是 :last-child，于是跟着标题走，
+   跟收藏夹/待播那边一样了（用户要的正是这个）。 */
+.view-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
 
 /* ---- 个人主页 ---- */
 .me-card{display:flex;align-items:center;gap:16px;padding:18px;margin-bottom:14px;
@@ -445,17 +450,48 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .video-wrap video{width:100%;height:100%;object-fit:contain;object-position:center;
   display:block;background:#08120F}
 
-/* 画面右下角那颗全屏键。跟画面走，不跟播放台走 ——
-   所以它住在这里（.video-wrap 里面），进出全屏都看得见。
-   深色底片子上永远是这个底色，不跟着主题走。 */
-.corner-btn{
+/* 画面右下角那排键（悬浮小窗 + 全屏）。跟画面走，不跟播放台走 ——
+   所以它们住在这里（.video-wrap 里面），进出全屏都看得见。
+   深色底片子上永远是这个底色，不跟着主题走。
+
+   ⚠️ 站位交给外面那个 .corner-bar，两颗按钮只是普通的 flex 项。
+      不能让它们各自 position:absolute;right:… —— 两个 right 会叠在同一个点上；
+      也不能给第二颗写 right:calc(14px + var(--sar) + 44px)：36 和 8 这两个尺寸
+      得有个单一来源，改一处忘一处就错位。 */
+.corner-bar{
   position:absolute;right:calc(14px + var(--sar));bottom:calc(14px + var(--sab));
-  z-index:6;width:36px;height:36px;border-radius:9px;display:grid;place-items:center;
+  z-index:6;display:flex;align-items:center;gap:8px}
+.corner-btn{
+  width:36px;height:36px;border-radius:9px;display:grid;place-items:center;
   color:rgba(255,255,255,.9);background:rgba(6,18,14,.5);
   border:1px solid rgba(255,255,255,.16);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   transition:background .15s,color .15s,border-color .15s}
 .corner-btn:hover{background:rgba(6,18,14,.74);color:#fff;border-color:rgba(255,255,255,.3)}
+
+/* ============================================================
+   安卓小窗（Activity PiP）
+   ---- 安卓的小窗不是"把画面搬进一个小窗口"，是**整个窗口**被系统缩进去。
+        所以进小窗之前，页面上除了画面以外的东西都得先收干净，让画面铺满整个窗口。
+   ---- 电脑端不走这条路：那边是浏览器自己的 Picture-in-Picture，页面留在原地
+        不动，所以 body.pip-on 只在安卓端挂（见 enterNativePip）。
+   ---- ⚠️ 这里不认 #viewStage 的 .active：用户完全可能是"视频还在放，返回键退回
+        了列表"（showList 只摘 .active，不碰视频），那时 #viewStage 是 display:none，
+        小窗里会是一片空白。所以直接把它支起来。 */
+body.pip-on > *:not(.app){display:none !important}   /* 模态/抽屉/浮层/toast 一律收掉 */
+body.pip-on .app{display:block;height:100dvh}
+body.pip-on .topbar,
+body.pip-on .sidebar,
+body.pip-on .deck,
+body.pip-on #viewMain{display:none}
+body.pip-on .stage{height:100dvh;padding:0;overflow:hidden}
+body.pip-on .view{padding:0}
+body.pip-on #viewStage{display:block;height:100%}
+body.pip-on .video-wrap{height:100%;pointer-events:none}
+/* 小窗里那几颗角落键缩成十来个像素，既看不清也按不着 —— 系统那圈控件
+   （放大 / 关闭 / 菜单）才是小窗里唯一能按的东西 */
+body.pip-on .corner-bar,
+body.pip-on .fs-ui{display:none}
 
 /* ============================================================
    全屏时的那层浮标
@@ -1116,6 +1152,8 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
   transition:background .15s,color .15s,box-shadow .15s}
 .seg-btn[aria-pressed="true"]{background:var(--surface);color:var(--mint-700);box-shadow:var(--sh-1)}
 .set-note{margin:10px 0 0;font-size:12px;color:var(--ink-3);line-height:1.6}
+/* 没话说的那一行别留个 10px 的空档（安卓端「文件位置」现在就是不写字的） */
+.set-note:empty{display:none}
 .set-note b{color:var(--ink-2);font-weight:600}
 /* 「导入方式」那一行：标题旁边挂一颗「？」，说明收在它后面。
    常显的那几段说明会把设置撑得老长，而这段是**看过一次就够**的东西 ——
@@ -1314,13 +1352,20 @@ body.vinyl-on .deck{z-index:160;box-shadow:0 -12px 34px rgba(12,26,21,.16)}
 .vinyl-artist{margin-top:5px;font-family:var(--mono);font-size:12px;
   color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vinyl-hint{margin-top:11px;font-size:12px;color:var(--ink-3)}
-.vinyl-close{
-  position:absolute;top:calc(var(--top-h) + var(--sat) + 12px);right:calc(16px + var(--sar));
+/* 顶上这两颗圆钮：**左上 = 退出箭头，右上 = 播放列表**。
+   ⚠️ 原来是右上角一颗 ✕。改这份样子的原因不是审美 —— 是「播放列表」那颗本来
+   住在当前页标题栏的右端，而这一层把它整个盖住了（用户原话：「会被唱片页盖住」），
+   右上角得腾出来给它；✕ 因此挪到左上角，顺势换成一个返回箭头，跟全屏浮标那颗
+   `#fsBack` 同一个样子（连 path 都是同一条）。 */
+.vinyl-close,.vinyl-pl{
+  position:absolute;top:calc(var(--top-h) + var(--sat) + 12px);
   width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
   color:var(--ink-3);background:var(--surface);border:1px solid var(--line);
   transition:background .15s,color .15s;
 }
-.vinyl-close:hover{background:var(--mint-100);color:var(--mint-700)}
+.vinyl-close{left:calc(16px + var(--sal))}
+.vinyl-pl{right:calc(16px + var(--sar))}
+.vinyl-close:hover,.vinyl-pl:hover{background:var(--mint-100);color:var(--mint-700)}
 
 /* ---- 电脑端：不盖侧栏和顶栏，里面也不再翻面 ----
    屏幕够宽的时候唱片和台词并排站着、两边同时看得见，翻面就没有意义了 ——
@@ -1453,7 +1498,9 @@ body.vinyl-wide #lyricBackBtn{display:none}
   .vol-knob{width:16px;height:16px}
   #vinyl{padding:calc(var(--top-h) + var(--sat) + 12px) 18px calc(var(--deck-h) + var(--sab) + 12px)}
   .vinyl-card{width:min(42vh,280px)}
-  .vinyl-close{top:calc(var(--top-h) + var(--sat) + 8px);right:calc(10px + var(--sar))}
+  .vinyl-close,.vinyl-pl{top:calc(var(--top-h) + var(--sat) + 8px)}
+  .vinyl-close{left:calc(10px + var(--sal))}
+  .vinyl-pl{right:calc(10px + var(--sar))}
 }
 /* 横过来的手机竖向只有三百来像素，顶上顶着顶栏、底下压着播放台，
    唱片再按 46vh 走就装不下了。按高度收，读数和提示也让一让。 */
@@ -1523,7 +1570,9 @@ body.vinyl-wide #lyricBackBtn{display:none}
              role="combobox" aria-expanded="false" aria-controls="searchDrop" aria-autocomplete="list">
     </label>
 
-    <div class="top-actions">
+    <!-- ⚠️ 这个盒子在电脑端是**空的**（#fileInput 除外）：三颗按钮被
+         placeTopActions() 搬进当前视图的标题栏里去了，手机端才回来。 -->
+    <div class="top-actions" id="topActions">
       <!-- 选文件和选文件夹合成一颗：点开是两选一。点了以后往哪边走得看清楚，
            所以菜单里那颗文件夹图标跟原来「选文件夹」那颗是同一个。 -->
       <button class="btn primary" id="btnAddFiles" aria-haspopup="menu" aria-expanded="false">
@@ -1542,7 +1591,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
           <path d="M12.2 8h3M13.7 6.5v3" stroke-linecap="round"/>
         </svg><span>从资料库添加</span>
       </button>
-      <button class="btn" id="btnSetPlaylist" aria-haspopup="true" aria-expanded="false" hidden>
+      <button class="btn" id="btnSetPlaylist" data-plbtn aria-haspopup="true" aria-expanded="false" hidden>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
           <path d="M5 3.4v9.2a.8.8 0 0 0 1.22.68l7.4-4.6a.8.8 0 0 0 0-1.36l-7.4-4.6A.8.8 0 0 0 5 3.4z"/>
         </svg><span>播放列表</span>
@@ -1705,11 +1754,19 @@ body.vinyl-wide #lyricBackBtn{display:none}
           </button>
         </div>
 
-        <!-- 全屏键搬到画面自己的右下角了。
-             从前它在下面那条播放台上，眼睛要看视频、手要跑到播放台去按，
-             全屏这件事跟画面有关，就该长在画面上。
-             ⚠️ 它必须住在 .video-wrap 里 —— 全屏时浏览器只画全屏元素**及其后代**，
-             放在外面的话一进全屏它自己就没了。 -->
+        <!-- 画面右下角那排键。从前只有一颗全屏，现在多了它**左边**那颗「悬浮小窗」
+             （用户要的位置：全屏按钮的左边）。
+             ⚠️ 它们必须住在 .video-wrap 里 —— 全屏时浏览器只画全屏元素**及其后代**，
+             放在外面的话一进全屏它们自己就没了。
+             ⚠️ 站位在那个盒子上，不在按钮上 —— 见 .corner-bar 那段注释。 -->
+        <div class="corner-bar">
+        <button class="corner-btn" id="btnPip" type="button" title="悬浮小窗" aria-label="悬浮小窗" hidden>
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+               stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4.6" width="14" height="10.8" rx="2"/>
+            <rect x="10.1" y="9.3" width="5.7" height="4.5" rx="1.1" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
         <button class="corner-btn" id="btnFull" type="button" title="全屏" aria-label="全屏" hidden>
           <svg id="icoFull" width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -1720,6 +1777,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
             <path d="M7.6 3v3a1.6 1.6 0 0 1-1.6 1.6H3M12.4 3v3a1.6 1.6 0 0 0 1.6 1.6H17M17 12.4h-3a1.6 1.6 0 0 0-1.6 1.6v3M3 12.4h3a1.6 1.6 0 0 1 1.6 1.6v3"/>
           </svg>
         </button>
+        </div>
       </div>
     </section>
   </main>
@@ -1862,9 +1920,20 @@ body.vinyl-wide #lyricBackBtn{display:none}
      播放台会被抬到它上面（body.vinyl-on）—— 用户要的就是"整屏是唱片、播放台浮在上面"。
      音频走不了全屏那一套：#btnFull 对音频是 hidden，fsActive() 也硬要求 playingVideo()。 -->
 <div id="vinyl" hidden role="dialog" aria-label="正在播放">
-  <button class="vinyl-close" id="vinylClose" type="button" title="关闭 (Esc)" aria-label="关闭">
-    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-         stroke-width="1.8" stroke-linecap="round"><path d="M5.4 5.4 14.6 14.6M14.6 5.4 5.4 14.6"/></svg>
+  <button class="vinyl-close" id="vinylClose" type="button" title="返回 (Esc)" aria-label="返回">
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+         stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11.5 5 6.5 10l5 5"/>
+    </svg>
+  </button>
+  <!-- 这一颗跟当前页标题栏那颗是**同一个面板**，只是换了个落脚点 ——
+       这一层把标题栏盖住了，所以在层内右上角再放一颗。
+       只有"这一页底下本来就有一列"（收藏夹/待播）时才出现，跟标题栏那颗一个规矩。 -->
+  <button class="vinyl-pl" id="vinylPl" type="button" data-plbtn hidden
+          aria-haspopup="true" aria-expanded="false" title="播放列表" aria-label="播放列表">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M5 3.4v9.2a.8.8 0 0 0 1.22.68l7.4-4.6a.8.8 0 0 0 0-1.36l-7.4-4.6A.8.8 0 0 0 5 3.4z"/>
+    </svg>
   </button>
   <div class="vinyl-stage">
     <div class="vinyl-card" id="vinylCard">
@@ -2039,6 +2108,14 @@ body.vinyl-wide #lyricBackBtn{display:none}
         存的是副本，<b>你原来的文件不会被改动</b>。
         「只建索引」只记住它在哪儿，不占软件空间，但原文件被删、改名或移走就找不回来了。
         两种方式下，时长、标签、标记点、片段、看到哪儿、波形都是齐的。</p>
+    </div>
+    <div class="set-row">
+      <span class="set-label" id="setNotifLabel">通知栏播放控制</span>
+      <div class="seg" role="group" aria-labelledby="setNotifLabel">
+        <button class="seg-btn" id="segNotifOn" aria-pressed="true">显示</button>
+        <button class="seg-btn" id="segNotifOff" aria-pressed="false">不显示</button>
+      </div>
+      <p class="set-note">手机下拉通知栏里那条听雨的播放控制（锁屏上那颗也是同一个）。</p>
     </div>
     <div class="set-row">
       <span class="set-label" id="setWhereLabel">文件位置</span>
@@ -2433,6 +2510,7 @@ const store = {
     resume: "auto",                    // auto = 自动跳转 · ask = 点击跳转 · silent = 静默跳转
     importMode: "store",               // store = 把文件也存进软件一份 · index = 只记索引，本体留在原地
     importNoticeSeen: false,           // 「导入会另存一份」那条说明弹过没有（只弹一次）
+    mediaSession: true,                // 手机下拉通知栏 / 锁屏上那条听雨的播放控制
     // 侧栏两个大项收起/展开。默认都收起 —— 夹子多了侧栏会顶满，
     // 而资料库和设置就在同一列里，被挤下去就点不到了。
     navOpen: { coll:false, queue:false },
@@ -3063,6 +3141,9 @@ async function restoreLibrary(){
     if (RESUME_MODES.includes(st.resume)) store.settings.resume = st.resume;
     if (IMPORT_MODES.includes(st.importMode)) store.settings.importMode = st.importMode;
     store.settings.importNoticeSeen = !!st.importNoticeSeen;
+    // 布尔开关的默认值是 true，所以判据得写 !== false：老存档里压根没这个键，
+    // 用 !!st.mediaSession 会把"没关过"读成"关掉了"，升级上来的人通知栏就没了。
+    store.settings.mediaSession = st.mediaSession !== false;
     if (st.navOpen && typeof st.navOpen === "object"){
       store.settings.navOpen = { coll:!!st.navOpen.coll, queue:!!st.navOpen.queue };
     }
@@ -3695,22 +3776,62 @@ function renderMain(){
   }
 }
 
-/* 顶栏右上角那排按钮跟着页面走：
+/* 那排按钮跟着页面走：
    资料库里是「往软件里加东西」，收藏夹/待播里是「这一列自己的事」。 */
+/* ⚠️⚠️ 这里攥的是**元素本身**，不是 id —— 这段代码里从此不许再出现
+   $("btnAddFiles") 这种写法，一律走 TA。原因是踩出来的：
+   renderMain() 每次都把 #viewMain 的 innerHTML 整个重写，上一轮搬进去的三颗
+   会连同 .view-head 一起被摘出文档。节点还活着（viewActions 攥着它们）、
+   属性也还在，但 document.getElementById 那一刻返回的是 **null** ——
+   于是还没等搬回来，syncTopActions 头一句就 TypeError 了，
+   整个 renderAll 从第二趟起全线崩，页面停在第一次渲染的样子。
+   （"攥住壳子就死不了"只对了一半：壳子活着，可 _查_ 不到。）
+   三颗在文档里的时候先取一次，之后认元素不认 id。 */
+const TA = {
+  add:  $("btnAddFiles"),
+  pick: $("btnPickFromLib"),
+  pl:   $("btnSetPlaylist"),
+};
+const TA_ALL = [TA.add, TA.pick, TA.pl];
+
+/* 电脑端这排按钮不住顶栏，住**当前这一页标题栏的右端**（用户要的：顶栏只剩
+   侧栏开关和搜索框）。手机端不动 —— 那三颗本来就收成了图标，不占地方。
+   ⚠️ 不能"搬一次就完事"：每次渲染完都要重新认领一次（理由见上）。 */
+const viewActions = document.createElement("div");
+viewActions.className = "view-actions";
+
 function syncTopActions(){
   const inLib = route.kind === "audio" || route.kind === "video";
   // 「从资料库添加」和「播放列表」是**某一列**的操作，只有收藏夹/待播页才该有。
   // 个人主页和榜单既不是资料库也不是某一列，两颗都不给。
   const inList = route.kind === "coll" || route.kind === "queue";
-  $("btnAddFiles").toggleAttribute("hidden", !inLib);
+  TA.add.toggleAttribute("hidden", !inLib);
   if (!inLib) closeAddFileMenu();
-  $("btnPickFromLib").toggleAttribute("hidden", !inList);
-  $("btnSetPlaylist").toggleAttribute("hidden", !inList);
+  TA.pick.toggleAttribute("hidden", !inList);
+  TA.pl.toggleAttribute("hidden", !inList);
   if (inList){
     const on = isCurrentList(route.kind, route.id);
-    $("btnSetPlaylist").title = on ? "当前播放列表 · 点开看顺序" : "点开看这一列的顺序";
+    TA.pl.title = on ? "当前播放列表 · 点开看顺序" : "点开看这一列的顺序";
     // 这一列没了（被删了、或者已经切到别的页），面板就别杵着了
     if (!plBox()) closePlPanel();
+  }
+  placeTopActions();
+}
+
+function placeTopActions(){
+  const head = narrow() ? null : $("viewMain").querySelector(".view-head");
+  // 这一页一颗都不给（个人主页/榜单）时也得把空壳摘掉 —— 它带 margin-left:auto，
+  // 杵在那儿会把那页的读数从右端拽走。
+  const anyShown = TA_ALL.some(el => !el.hasAttribute("hidden"));
+  const ta = $("topActions");
+  if (head && anyShown){
+    viewActions.append(...TA_ALL);
+    if (viewActions.parentNode !== head) head.appendChild(viewActions);
+    return;
+  }
+  if (viewActions.parentNode) viewActions.remove();
+  for (const el of TA_ALL){
+    if (el.parentNode !== ta) ta.insertBefore(el, $("fileInput"));
   }
 }
 
@@ -3761,6 +3882,9 @@ function stopVideoForLeave(){
   if (playingVideo()) grabFrame(player.current, videoEl);
   if (playingVideo() && !activeEl.paused) activeEl.pause();
   hidePeek();
+  // 离开视频页就把小窗收掉。留着是个停住的一帧，页面这边再没有任何东西能操作它
+  // （电脑端画面根本已经不在页面上了）—— 一个关不掉的死窗口比没有更糟。
+  if (pipActive()) exitPip();
 }
 
 function navTo(kind, id = null){
@@ -3863,7 +3987,7 @@ function load(m, { autoplay = true, auto = false } = {}){
   m.kind === "video" ? showStage() : showList();
   // 逐帧和全屏同一条规矩：音频没有"帧"这回事，空载更谈不上。
   // 全屏那颗还多一条"别在全屏里露脸"，所以走自己的函数。
-  syncFullBtn();
+  syncCornerBtns();
   $("frameBtns").toggleAttribute("hidden", m.kind !== "video");
   // 帧长按这一条片子现量。换片先退回默认值，免得拿上一部片子的帧长去走这一部。
   measureFrame();
@@ -4129,7 +4253,7 @@ function setPlaying(p){
   }
   fsPaint();
   syncVinylSpin();
-  if ("mediaSession" in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused";
+  if ("mediaSession" in navigator && notifOn()) navigator.mediaSession.playbackState = p ? "playing" : "paused";
 }
 /* ---- 听了多少：播放次数 + 累计时长 ----
    plays 在 setPlaying(true) 里加，一次载入只加一次（暂停再播不算第二遍）。
@@ -4165,7 +4289,7 @@ function onTime(){
   $("deckTime").innerHTML = `<b>${fmtTime(activeEl.currentTime)}</b> / ${fmtTime(d)}`;
   drawWave(); fsPaint();
   savePos(false);                   // 自己按毫秒节流，一分钟也就写十来次
-  if ("mediaSession" in navigator && navigator.mediaSession.setPositionState && isFinite(d) && d > 0){
+  if ("mediaSession" in navigator && notifOn() && navigator.mediaSession.setPositionState && isFinite(d) && d > 0){
     try{ navigator.mediaSession.setPositionState({ duration:d, position:Math.min(activeEl.currentTime,d), playbackRate:rules.rate }); }catch{}
   }
 }
@@ -5037,10 +5161,19 @@ function openVinyl(m){
   renderVinyl();                             // 先按当前宽度排好，再露脸（免得闪一下错的那套）
   $("vinyl").hidden = false;
   document.body.classList.add("vinyl-on");   // 把播放台抬到覆盖层上面
+  // 面板要是正开着，钉的却是标题栏那颗按钮 —— 那颗按钮这会儿被这一层盖住了。
+  // 换个落脚点接着钉（不是收掉：人正看着那一列，掀了等于把他刚翻到的地方毁了）。
+  if (!plPanel.hidden && !$("vinylPl").hasAttribute("hidden")){
+    setPlAnchor($("vinylPl"));
+    placePlPanel();
+  }
 }
 function closeVinyl(){
   if ($("vinyl").hidden) return;
   lyricEditing = false;
+  // 面板钉的是层内那颗按钮，这一层一揭它就藏了 —— 留着面板会飘在半空。
+  // （钉标题栏那颗的话不归这儿管，底下那一页还在。）
+  if (plAnchor === $("vinylPl")) closePlPanel();
   $("vinyl").hidden = true;
   document.body.classList.remove("vinyl-on");
 }
@@ -5091,6 +5224,9 @@ function syncVinylWide(){
 
 function renderVinyl(){
   const m = player.current;
+  // 右上角那颗「播放列表」：只有"这一页底下本来就有一列"（收藏夹/待播）时才给。
+  // 判据跟标题栏那颗是同一条（plBox()），别在两处各写一份。
+  $("vinylPl").toggleAttribute("hidden", !plBox());
   $("vinylTitle").textContent  = m ? titleOf(m) : "未在播放";
   $("vinylArtist").textContent = m ? artistOf(m) : "";
   const lab = $("discLabel");
@@ -5320,23 +5456,30 @@ function lockLandscape(on){
     else if (so.unlock) so.unlock();
   }catch{ /* 不支持 / 没权限，当没这回事 */ }
 }
-/* 画面右下角那颗全屏键什么时候露脸：
-   ① 得在放视频（音频没有可全屏的东西，空载更谈不上）；
-   ② 得不在全屏里 —— 全屏时画面铺满整屏，角落那颗越看越碍事，
-      而退出全屏本来就有浮标上的「返回」，不需要再来一颗。
-   两个条件一起管，所以单独一个函数；load() 和 syncFullUI() 都走它。 */
-function syncFullBtn(){
+/* 画面右下角那两颗键什么时候露脸。
+   全屏那颗：① 得在放视频（音频没有可全屏的东西，空载更谈不上）；
+             ② 得不在全屏里 —— 全屏时画面铺满整屏，角落那颗越看越碍事，
+                而退出全屏本来就有浮标上的「返回」，不需要再来一颗。
+   小窗那颗：①②同上，外加
+             ③ 这台机器真的支持（安卓 API 24/25 压根没有小窗这个功能，
+                有些 ROM 还把 FEATURE_PICTURE_IN_PICTURE 关掉了）；
+             ④ 得不在小窗里 —— 在小窗里时这颗按钮要么看不见（安卓整个页面被缩走），
+                要么没意义（电脑端系统小窗自己那圈控件里就有"回到标签页"）。
+   全挤在一个函数里，是因为它们共用同一个"在放视频吗、在全屏吗"的判据；
+   load()、syncFullUI()、两条 PiP 事件都走它。 */
+function syncCornerBtns(){
   const on = !!fsElement();
   $("icoFull").toggleAttribute("hidden", on);
   $("icoFullExit").toggleAttribute("hidden", !on);
   $("btnFull").title = on ? "退出全屏" : "全屏";
   $("btnFull").setAttribute("aria-label", on ? "退出全屏" : "全屏");
-  const show = !!player.current && player.current.kind === "video" && !on;
-  $("btnFull").toggleAttribute("hidden", !show);
+  const video = !!player.current && player.current.kind === "video";
+  $("btnFull").toggleAttribute("hidden", !(video && !on));
+  $("btnPip").toggleAttribute("hidden", !(video && !on && !pipActive() && pipSupported()));
 }
 function syncFullUI(){
   const on = !!fsElement();
-  syncFullBtn();
+  syncCornerBtns();
   adoptRulePanel(on);
   lockLandscape(on);
   hidePeek();                     // 全屏里压根看不见播放轴，预览别留到出来时才收
@@ -5358,6 +5501,98 @@ function toggleFull(){
   if (r && r.catch) r.catch(() => toast("这个环境下打不开全屏"));
 }
 $("btnFull").addEventListener("click", toggleFull);
+
+/* ============================================================
+   8.5 悬浮小窗（画中画）
+   ---- 两条路，长得完全不一样：
+        ① 电脑端（Electron 壳）和网页端 —— 浏览器自己的 Picture-in-Picture。
+           画面被系统搬进一个小窗口，**页面留在原地不动**，这边什么都不用改。
+           用户要的"能拖、能拖边缘改大小"是系统给的，不用自己写。
+        ② 安卓 —— WebView 里没有 requestPictureInPicture（Blink 那套只在浏览器
+           UI 那层接线，WebView 没接），只能走 Activity 的原生小窗：
+           **整个窗口**被系统缩进去。所以页面得配合着把画面以外的东西收干净，
+           那是 body.pip-on 那套 CSS。
+   ============================================================ */
+
+const pipNative = () => CapPip;
+// 网页端那颗按钮能不能露脸，这里当场就有答案；安卓那边得问原生（异步，见文件末尾）
+const pipWebOK = () => !!document.pictureInPictureEnabled
+                   && typeof videoEl.requestPictureInPicture === "function";
+
+// 安卓：现在在不在小窗里。原生事件说了算 —— 窗口整个被缩走了，页面这边看不见。
+let pipOn = false;
+// 安卓：支持不支持。null = 还没问到，问之前那颗按钮先别露脸。
+let pipNativeOK = null;
+
+const pipActive = () => pipNative() ? pipOn : (document.pictureInPictureElement === videoEl);
+const pipSupported = () => pipNative() ? pipNativeOK === true : pipWebOK();
+
+/* 退出小窗。两端各一句。
+   ⚠️ 网页端那句要判空：exitPictureInPicture() 在没有小窗的时候会
+   reject(InvalidStateError) —— 那不是说"没这回事"，是"现在没有可退的"。 */
+function exitPip(){
+  if (document.pictureInPictureElement){
+    try{ document.exitPictureInPicture()?.catch?.(() => {}); }catch{}
+  }
+  // 安卓那句见 PipPlugin.exit 的注释：系统压根没有"退出小窗"这个 API，
+  // 只能把 Activity 叫回前台 —— 那会把软件从后台拽到屏幕上。
+  // 所以只在确定自己就在前台时才调。
+  if (pipNative() && pipOn && document.visibilityState === "visible"){
+    try{ CapPip.exit?.()?.catch?.(() => {}); }catch{}
+  }
+}
+
+function togglePip(){
+  if (pipActive()){ exitPip(); return; }
+  if (!player.current || player.current.kind !== "video") return;
+  if (pipNative()){ enterNativePip(); return; }
+
+  // ---- 网页 / 电脑端 ----
+  if (!pipWebOK()){ toast("这个环境下打不开悬浮小窗"); return; }
+  /* 能提前挡的都提前挡 —— requestPictureInPicture 那几种拒绝里，
+     InvalidStateError（没视频轨 / readyState 还是 HAVE_NOTHING）是能自查的。
+     ⚠️ 这一句到下面那句之间**不能有 await**：用户手势是一次性的，
+     中间 await 一下就过期了，浏览器会直接 NotAllowedError。 */
+  if (!videoEl.videoWidth || !videoEl.videoHeight){ toast("这条片子还没有画面，稍等一下再试"); return; }
+  if (videoEl.readyState < 1){ toast("还没准备好，稍等一下再试"); return; }
+  const r = videoEl.requestPictureInPicture();
+  if (r && r.catch) r.catch(err => {
+    // NotSupportedError / SecurityError / InvalidStateError —— 具体哪个不重要，
+    // 用户要的是一句人话。名字留在控制台里给以后的人看。
+    console.warn("[听雨] 小窗打不开：", err && err.name, err && err.message);
+    toast("这个环境下打不开悬浮小窗");
+  });
+}
+
+/* ---- 安卓那半：原生小窗 ----
+   进小窗之前**先**把 body.pip-on 挂上，原生那边收到 modeChanged 再校一次；
+   进不去就把这个类摘掉。
+   乐观挂是有意的：小窗动画一开始，系统画的就是"当时的样子"。等回调回来再挂就晚了 ——
+   那几百毫秒里，用户看见的是**整个软件**（顶栏、侧栏、播放台）被缩进那个小方块。 */
+function enterNativePip(){
+  const r = videoEl.getBoundingClientRect();
+  document.body.classList.add("pip-on");
+  pipOn = true;
+  syncCornerBtns();
+  const p = CapPip.enter({
+    width:  videoEl.videoWidth  || 16,
+    height: videoEl.videoHeight || 9,
+    x: Math.round(r.left), y: Math.round(r.top),
+    rectW: Math.round(r.width), rectH: Math.round(r.height),
+  });
+  if (p && p.catch) p.catch(() => {
+    pipOn = false;
+    document.body.classList.remove("pip-on");
+    syncCornerBtns();
+    toast("这个环境下打不开悬浮小窗");
+  });
+}
+
+// 电脑端那两个事件是打在 <video> 上的，不是 document 上
+videoEl.addEventListener("enterpictureinpicture", syncCornerBtns);
+videoEl.addEventListener("leavepictureinpicture", syncCornerBtns);
+$("btnPip").addEventListener("click", togglePip);
+
 $("btnFrameBack").addEventListener("click", () => stepFrame(-1));
 $("btnFrameFwd").addEventListener("click",  () => stepFrame(1));
 // 全屏里那两颗跟播放台上的是同一个 stepFrame。**不调 fsReveal()** ——
@@ -5379,6 +5614,10 @@ addEventListener("orientationchange", () => setTimeout(() => {
    ============================================================ */
 // 处理函数只在启动时挂一遍。原来挂在 load() 里，每换一首都要重挂，
 // 那一小段空窗期正好锁屏的话，锁屏按钮就是哑的。
+// ⚠️ 名字单开一份常量：设置里那颗开关要拿它逐个摘掉（setActionHandler(n, null)），
+//    两处各写一遍名单迟早会漏一个。
+const MS_ACTIONS = ["play","pause","stop","previoustrack","nexttrack",
+                    "seekbackward","seekforward","seekto"];
 function initMediaSession(){
   if (!("mediaSession" in navigator)) return;
   const ms = navigator.mediaSession;
@@ -5393,7 +5632,7 @@ function initMediaSession(){
   set("seekto", d => { if (d.seekTime != null) activeEl.currentTime = d.seekTime; });
 }
 function updateMediaSession(m){
-  if (!("mediaSession" in navigator)) return;
+  if (!("mediaSession" in navigator) || !notifOn()) return;
   const t = m.tags || {};
   navigator.mediaSession.metadata = new MediaMetadata({
     title:  titleOf(m),
@@ -5401,6 +5640,27 @@ function updateMediaSession(m){
     album:  t.album || "",
     artwork: m.coverUrl ? [{ src:m.coverUrl, sizes:"512x512", type:"image/jpeg" }] : [],
   });
+}
+
+/* 设置里那颗「通知栏播放控制」。默认开 —— 老存档里没这个键，按"没关过"算。 */
+const notifOn = () => store.settings.mediaSession !== false;
+
+/* 开关两个方向都走这一个收口。
+   ⚠️ 关掉的时候光"以后不再设 metadata"是不够的：会话一旦建起来，手机下拉通知栏
+   里那一条就挂在那儿不走，得三样一起撤——元数据清空、playbackState 归 "none"、
+   动作处理逐个摘掉。反过来开的时候也要把动作重新挂上（initMediaSession 是幂等的）。 */
+function applyMediaSession(){
+  if (!("mediaSession" in navigator)) return;
+  const ms = navigator.mediaSession;
+  if (!notifOn()){
+    ms.metadata = null;
+    ms.playbackState = "none";
+    for (const n of MS_ACTIONS){ try{ ms.setActionHandler(n, null); }catch{} }
+    return;
+  }
+  initMediaSession();
+  if (player.current) updateMediaSession(player.current);
+  ms.playbackState = player.playing ? "playing" : "paused";
 }
 
 /* ============================================================
@@ -5728,7 +5988,7 @@ function reallyRemoveItems(list){
     if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
     activeEl.removeAttribute("src"); activeEl.load();
     player.current = null;
-    syncFullBtn();
+    syncCornerBtns();
     wave.peaks = null; wave.key = null;
     setTitle($("deckTitle"), "未在播放");
     $("deckSub").innerHTML = `<span class="micro">导入文件后开始</span>`;
@@ -5804,11 +6064,26 @@ function setImpHelp(open){
 }
 $("impHelp").addEventListener("click", () => setImpHelp($("impNote").hidden));
 
+/* ---- 通知栏播放控制：手机下拉通知栏 / 锁屏那一条 ---- */
+const NOTIF_SEG = { on:"segNotifOn", off:"segNotifOff" };
+function syncNotifUI(){
+  for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).setAttribute("aria-pressed", String(notifOn() === (k === "on")));
+}
+function setNotif(v){
+  const on = v === "on";
+  if (notifOn() === on) return;
+  store.settings.mediaSession = on;
+  syncNotifUI(); saveLibrary();
+  applyMediaSession();          // 当场生效，不用等下一首
+}
+for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).addEventListener("click", () => setNotif(k));
+
 $("navSettings").addEventListener("click", () => {
   setDrawer(false);            // 手机上抽屉让位给设置弹窗
   syncLayoutUI();
   syncResumeUI();
   syncImportUI();
+  syncNotifUI();
   setImpHelp(false);
   syncWhereUI();               // 「文件位置」那一行按平台现填（壳 / 安卓 / 网页各一套）
   $("setModal").hidden = false;
@@ -6298,6 +6573,11 @@ $("addQueue").addEventListener("click", () => {
    ============================================================ */
 let plFor = null;
 const plPanel = $("plPanel");
+/* 能点开这个面板的按钮都带这个记号：顶栏/标题栏那颗，和唱片页右上角那颗。
+   点外面收起时要连它们一起放过 —— 不然 pointerdown 先把面板收了，
+   紧接着的 click 又把它打开，用户看到的是"闪了一下"。
+   跟 SORT_ANCHOR_SEL 一个套路，多一颗按钮就多贴一个记号，不改选择器。 */
+const PL_ANCHOR_SEL = "[data-plbtn]";
 const plBox = () => route.kind === "coll" ? findColl(route.id)
                  : route.kind === "queue" ? findQueue(route.id) : null;
 
@@ -6366,13 +6646,29 @@ function bindSortBtn(host, box){
   });
 }
 
-// 面板钉在顶栏那颗「播放列表」按钮下面。位置单拎出来，是因为窗口尺寸一变
+/* 点开这颗按钮的**那一颗**。从前这里写死的是 #btnSetPlaylist，现在唱片页里
+   还有一颗（#vinylPl —— 这一层把标题栏整个盖住了，所以层内右上角再放一颗）。
+   钉错了地方面板会飞到屏幕另一头去，所以谁点开的就钉谁。
+   面板是单例，同一时刻这里最多只有一个值。 */
+let plAnchor = null;
+function setPlAnchor(btn){
+  if (plAnchor === btn) return;
+  if (plAnchor) plAnchor.setAttribute("aria-expanded", "false");
+  plAnchor = btn || null;
+  if (plAnchor) plAnchor.setAttribute("aria-expanded", "true");
+}
+
+// 面板钉在那颗按钮下面。位置单拎出来，是因为窗口尺寸一变
 // 得照新尺寸重算一遍 —— 顶栏本身不随 #stage 滚动，所以只要按钮没挪窝就不用收。
 function placePlPanel(){
+  const btn = plAnchor || TA.pl;
+  // ⚠️ 按钮这会儿可能正好是藏着的（唱片页刚揭掉、标题栏那颗还没露出来）。
+  // 藏着的元素量出来是全 0，面板会"啪"地贴到左上角去 —— 那还不如不收。
+  if (btn.hasAttribute("hidden") || !btn.getClientRects().length){ closePlPanel(); return; }
   // 同 #addMenu：先把 left/top 归零再量，量到的才是最终尺寸
   plPanel.style.left = "0px";
   plPanel.style.top  = "0px";
-  const a = $("btnSetPlaylist").getBoundingClientRect();
+  const a = btn.getBoundingClientRect();
   const m = plPanel.getBoundingClientRect();
   let left = a.right - m.width;
   let top  = a.bottom + 6;
@@ -6382,7 +6678,7 @@ function placePlPanel(){
   plPanel.style.top  = top + "px";
 }
 
-function openPlPanel(){
+function openPlPanel(btn){
   if (!plBox()) return;
   plFor = { kind: route.kind, id: route.id };
   // 展开就等于认领：这一列就是现在播放的那一列，播放台的上一首/下一首
@@ -6393,8 +6689,7 @@ function openPlPanel(){
   closeAddMenu(); closeNavMenu();
   renderPlPanel();
   plPanel.hidden = false;
-  const btn = $("btnSetPlaylist");
-  btn.setAttribute("aria-expanded", "true");
+  setPlAnchor(btn || TA.pl);
   placePlPanel();
   rollPlText();         // 露出来了才量得到宽度 —— renderPlPanel 里那发是空过的
 
@@ -6406,7 +6701,7 @@ function closePlPanel(){
   closeSortMenu();               // 排序菜单是它的子浮层，皮之不存毛将焉附
   plPanel.hidden = true;
   plFor = null;
-  $("btnSetPlaylist").setAttribute("aria-expanded", "false");
+  setPlAnchor(null);
 }
 
 function plCtx(){
@@ -6460,7 +6755,7 @@ document.addEventListener("pointerdown", e => {
   const t = e.target;
   // 排序菜单是面板的**子浮层**，挂在面板外面（fixed）。点它不算点外面 ——
   // 漏了这一条，菜单一弹出来点任何一项都会先把面板收掉，人看到的是"点了没反应"。
-  if (t instanceof Element && (plPanel.contains(t) || t.closest("#btnSetPlaylist")
+  if (t instanceof Element && (plPanel.contains(t) || t.closest(PL_ANCHOR_SEL)
       || sortMenu.contains(t) || t.closest(SORT_ANCHOR_SEL))) return;
   closePlPanel();
 }, true);
@@ -6526,7 +6821,8 @@ $("btnMenu").addEventListener("click", () => {
 });
 $("sideScrim").addEventListener("click", () => setDrawer(false));
 // 转回宽屏时把抽屉状态收干净，否则那点位移会留在侧栏上
-addEventListener("resize", () => { if (!narrow()) setDrawer(false); });
+// 顺带把顶栏那三颗按钮在"顶栏 ⇄ 标题栏"之间挪一次 —— 它认的就是同一条 860px 线
+addEventListener("resize", () => { if (!narrow()) setDrawer(false); placeTopActions(); });
 
 // 卡片/行：点封面播放，点「⋯」开菜单
 $("viewMain").addEventListener("click", e => {
@@ -7103,7 +7399,7 @@ function openAddFileMenu(anchor){
 function closeAddFileMenu(){
   if (addFileMenu.hidden) return;
   addFileMenu.hidden = true;
-  $("btnAddFiles").setAttribute("aria-expanded", "false");
+  TA.add.setAttribute("aria-expanded", "false");
 }
 addFileMenu.addEventListener("click", e => {
   const btn = e.target.closest("[data-add]");
@@ -7122,7 +7418,7 @@ document.addEventListener("pointerdown", e => {
 addEventListener("resize", closeAddFileMenu);
 $("btnAddFiles").addEventListener("click", () => {
   if (!addFileMenu.hidden) closeAddFileMenu();
-  else openAddFileMenu($("btnAddFiles"));
+  else openAddFileMenu(TA.add);
 });
 
 $("fileInput").addEventListener("change", e => { addFiles([...e.target.files]); e.target.value = ""; });
@@ -7139,7 +7435,11 @@ $("btnPickFromLib").addEventListener("click", () => {
 });
 // 点一下展开、再点一下收起（展开本身就把这一列认领成当前播放列表，见 openPlPanel）
 $("btnSetPlaylist").addEventListener("click", () => {
-  if (plPanel.hidden) openPlPanel(); else closePlPanel();
+  if (plPanel.hidden) openPlPanel(TA.pl); else closePlPanel();
+});
+// 唱片页右上角那一颗：跟上面是同一个面板、同一套开合，只是换了个落脚点
+$("vinylPl").addEventListener("click", () => {
+  if (plPanel.hidden) openPlPanel($("vinylPl")); else closePlPanel();
 });
 
 let dragDepth = 0;
@@ -7183,9 +7483,17 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.2";
+const APP_VERSION = "0.1.3";
 
 const CHANGELOG = [
+  { v: "0.1.3", date: "2026-09-15", title: "悬浮小窗与按钮归位",
+    items: [
+      "悬浮小窗：视频右下角、全屏键左边多了一颗，画面缩进一个小窗浮在屏幕上，能拖、拖边缘能改大小",
+      "电脑端：顶栏那三颗按钮搬到了当前这一页标题栏的右端，顶栏只剩侧栏开关和搜索框",
+      "唱片页：右上角也有一颗「播放列表」（从前被唱片页盖住了），左上角那颗改成返回箭头",
+      "设置：多了一颗「通知栏播放控制」，手机下拉通知栏和锁屏上那条可以关掉",
+      "设置：安卓端那段讲私有目录的说明删掉了，那颗按钮照旧",
+    ] },
   { v: "0.1.2", date: "2026-09-15", title: "返回键、状态栏与文件位置",
     items: [
       "安卓返回键：真修好了 —— 上一版那段监听压根没挂上，返回和退出确认都没反应",
@@ -7382,6 +7690,9 @@ let CapBars = (onNative && CAP.Plugins) ? (CAP.Plugins.SystemBars || null) : nul
 // AppInfo 是自己写的那颗（mobile/android/.../AppInfoPlugin.java），
 // MainActivity 在 super.onCreate 之前 registerPlugin 进来的。
 let CapInfo = (onNative && CAP.Plugins) ? (CAP.Plugins.AppInfo || null) : null;
+// Pip 也是自己写的那颗（mobile/android/.../PipPlugin.java）。
+// 网页端 / 电脑端没有它，那边走浏览器自己的 Picture-in-Picture，不需要原生配合。
+let CapPip = (onNative && CAP.Plugins) ? (CAP.Plugins.Pip || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
@@ -7406,6 +7717,41 @@ if (CapBars){
     const r = CapBars.setStyle({ style: "LIGHT" });
     if (r && r.catch) r.catch(() => {});
   } catch (e){}
+}
+
+/* 安卓那半的悬浮小窗。
+   ① modeChanged：系统只说"进/出了"，页面照着挂/摘 body.pip-on。
+      事件名和 addListener 的用法跟下面 CapApp 那条 backButton 是同一个形状。
+   ② isSupported：问一次支持情况。API 26 以下、或者系统把
+      FEATURE_PICTURE_IN_PICTURE 关了的，那颗按钮压根不该露脸 ——
+      答案回来之前 pipNativeOK 是 null，也就是"先别露脸"。
+   ③ loadedmetadata：小窗里换了一条分辨率不一样的片子（小窗上那颗"下一首"就是这条
+      路），小窗的形状得跟着改，不然还照上一部片子的比例摆着。 */
+if (CapPip){
+  try {
+    const h = CapPip.addListener("modeChanged", d => {
+      pipOn = !!(d && d.inPip);
+      document.body.classList.toggle("pip-on", pipOn);
+      syncCornerBtns();
+    });
+    if (h && h.catch) h.catch(() => {});
+  } catch (e){}
+  try {
+    const s = CapPip.isSupported();
+    if (s && s.then) s.then(v => {
+      pipNativeOK = !!(v && v.supported);
+      // 进程被系统收走之后从最近任务回来，可能一进来就已经在小窗里了
+      pipOn = !!(v && v.inPip);
+      document.body.classList.toggle("pip-on", pipOn);
+    }).catch(() => { pipNativeOK = false; })
+      .then(() => syncCornerBtns());
+  } catch (e){ pipNativeOK = false; }
+
+  videoEl.addEventListener("loadedmetadata", () => {
+    if (pipNative() && pipOn && videoEl.videoWidth){
+      try{ CapPip.setAspectRatio({ width: videoEl.videoWidth, height: videoEl.videoHeight })?.catch?.(() => {}); }catch{}
+    }
+  });
 }
 
 function askExit(){
@@ -7453,9 +7799,10 @@ if (CapApp){
    ---- 安卓：音视频存在应用私有目录里，任何文件管理器都进不去（Android 11 起
         Android/data 整棵树对第三方应用关闭，系统自带的文件管理器也不行）。
         这是系统的限制，不是没做。所以那颗按钮退一步，跳系统的「应用信息」页。
+        ⚠️ 这一段原来在设置里是**写出来给用户看的**，现在不写了 —— 那句说明太长得
+        像故障提示。按钮照旧，下面那行不留字。
    ---- 网页：没有壳，什么也打不开，按钮保持 disabled 并如实说明。
    ============================================================ */
-const ANDROID_PKG = "com.mingyuezai0.listra";
 let shellBridge = (typeof window !== "undefined" && window.listra
                    && typeof window.listra.revealUserData === "function") ? window.listra : null;
 
@@ -7479,9 +7826,7 @@ function syncWhereUI(){
       .catch(() => { note.textContent = "存在这台电脑的软件数据目录里。"; });
   } else if (kind === "android"){
     btn.textContent = "打开应用信息";
-    note.textContent = "音视频存在应用自己的私有目录里（/data/data/" + ANDROID_PKG + "/app_webview/），"
-      + "其他应用和文件管理器都进不去 —— 这是安卓的限制。上面那颗按钮会打开系统的"
-      + "「应用信息」，在那儿能看到占用了多少空间，也能清除数据。";
+    note.textContent = "";              // 空着不写 —— :empty 那条 CSS 会把它整个收掉
   } else {
     btn.textContent = "在文件夹中显示";
     note.textContent = "网页版里音视频是存进浏览器自己的库里的，系统里并没有一个对应的文件夹"
@@ -7554,6 +7899,7 @@ initMediaSession();
 syncLayoutUI();
 syncResumeUI();
 syncImportUI();
+syncNotifUI();
 renderAll();
 drawWave();
 paintRules();
