@@ -25,6 +25,15 @@
 
         </activity>
 
+        <!-- 通知栏/锁屏上那条播放控制。⚠️ 这条服务是**前台服务**：
+             API 26 起不挂前台的话，进程一进后台就被掐，通知跟着消失。
+             类型是 API 34 起强制的 —— 报 mediaPlayback 就得有下面那条同名权限，
+             少一样 startForeground 直接抛（配 MediaService 里那个 try 就是"通知栏永远空的"）。 -->
+        <service
+            android:name=".MediaService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -39,4 +48,12 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 播放控制那条通知。三条都是"少一条就整条功能不工作"，没有一条是宽着要的：
+         · FOREGROUND_SERVICE          前台服务本身（API 28 起要）
+         · FOREGROUND_SERVICE_MEDIA_PLAYBACK  上面 service 报的 mediaPlayback 类型（API 34 起要）
+         · POST_NOTIFICATIONS          API 33 起通知要用户点头，没有的话前台服务照跑但通知不显示 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

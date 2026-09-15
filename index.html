@@ -84,6 +84,8 @@ input{font:inherit;color:inherit}
   scrollbar-width:none;
   -ms-overflow-style:none;
 }
+/* ⚠️ .set-scroll 不在这份名单里 —— 设置里那一长条是**真内容**不是浮层，
+   藏掉滚动条的话用户看不出下面还有「文件位置」。 */
 .stage::-webkit-scrollbar, .sidebar::-webkit-scrollbar, .about-scroll::-webkit-scrollbar,
 .lyric-body::-webkit-scrollbar, .dup-list::-webkit-scrollbar, .pick-list::-webkit-scrollbar,
 #plPanel::-webkit-scrollbar, #rulePanel::-webkit-scrollbar, #markPanel::-webkit-scrollbar,
@@ -288,6 +290,16 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .me-link-tx b{font-size:14px;font-weight:650;color:var(--ink)}
 .me-link-tx i{font-style:normal;font-size:12px;color:var(--ink-3)}
 .me-link-go{color:var(--ink-3);font-size:20px;line-height:1;flex:0 0 auto}
+/* 四格读数。等宽数字 + 大字，语气跟播放台上那排读数一致 ——
+   这块是"仪表"，不是"祝福语"，所以不给它配色、也不加图标。 */
+.me-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;margin-bottom:14px}
+.me-stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:13px 15px;min-width:0}
+.me-stat b{display:block;font-family:var(--mono);font-size:19px;font-weight:600;
+  color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me-stat i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3);margin-top:4px}
 
 /* ---- 榜单 ---- */
 .board-bars{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
@@ -330,6 +342,31 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .card-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);
   font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
 .card-tags{display:flex;gap:5px;margin-top:6px;align-items:center;min-height:17px}
+/* 用户自己贴的标签那一串。软件算出来的那几颗（无损 / 索引 / 播放中）钉在左边不动，
+   后面这串装不下就自己来回滚 —— 早先是"只摆两个、剩下的压成 +N"，
+   可摆得下几个全看卡片多宽，宽窗口下白白把后面的藏了。
+   滚动用的是和播放台标题同一条 keyframes（titleRoll），
+   --roll / --roll-dur 也是同一套，改一处两边一起变。
+   ⚠️ 裁切和位移必须分成两层：.tags-run 负责裁（overflow:hidden），
+      里面那个 .roll-text 才是被 translateX 推着走的。合成一层的话
+      transform 会把裁切框一起挪走，等于没裁。 */
+.card-tags .tags-run{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
+/* .roll-text 自带 will-change:transform，那是给"一次只有一行"的标题写的。
+   书架一屏几十张卡，每张都挂一层合成层太费，所以不滚的那些收回 auto。 */
+.card-tags .tags-run:not(.rolling) > .roll-text{will-change:auto}
+/* 间距改由药丸自己带：外面那层从 flex 容器变成了一个 inline 壳，
+   父级的 gap 够不到里面了。列表那边同理（.m-tags 的 gap 现在只隔在
+   「这串标签」和「软件那几颗」之间），所以这条不能只写在 .card-tags 底下。 */
+.tags-run .pill{margin-right:5px}
+.tags-run .pill:last-child{margin-right:0}
+/* ⚠️ 两层都得是 flex，不能靠行内盒排。.roll-text 默认是 inline-block，
+   坐在基线上会连底下那道降部空间一起算进行高 —— 卡片平白高出 6px，
+   于是"有标签的卡"比"没标签的卡"高出一截（一排卡片参差不齐）。
+   flex 里没有行盒，高度就是药丸自己的 17px。
+   ⚠️ 只认 .tags-run 里面那一层 —— .roll-text 播放台标题也在用，
+   那边的行高不能动。 */
+.tags-run{display:flex;min-width:0}
+.tags-run > .roll-text{display:flex;align-items:center}
 /* 卡片上的「⋯」，点开「添加至」 */
 .card-more{
   position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:8px;
@@ -449,6 +486,9 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
    而网格区域的高度又是由内容撑出来的，循环一次就退化成"不约束"，画面被裁掉。 */
 .video-wrap video{width:100%;height:100%;object-fit:contain;object-position:center;
   display:block;background:#08120F}
+/* 视频镜像。只翻画面不动布局：object-fit 的居中缩放由浏览器先做完，
+   transform 再把这个结果整体镜像过去，所以信箱边不会跑到另一侧。 */
+.video-wrap video.mirror{transform:scaleX(-1)}
 
 /* 画面右下角那排键（悬浮小窗 + 全屏）。跟画面走，不跟播放台走 ——
    所以它们住在这里（.video-wrap 里面），进出全屏都看得见。
@@ -869,7 +909,14 @@ body.pip-on .fs-ui{display:none}
 #rulePanel,#markPanel{
   /* 同 #addMenu：宽度必须写死。position:fixed + width:auto 在定 left/top
      之前量到的 shrink-to-fit 宽度是错的，算出来的位置会把面板甩到角上。 */
-  position:fixed;z-index:150;background:var(--surface);
+  /* z-index 是 175 不是别的浮层那样的 150，理由和 #plPanel 当年一样：
+     #vinyl 也是 150，两个都是 body 下的 position:fixed，同档就按文档序画 ——
+     而 #vinyl 排在后面，于是唱片页一开，播放设置就被它整个盖住。偏偏
+     body.vinyl-on .deck 是 160，播放台（以及上面那颗按钮）浮到了唱片页之上，
+     结果就是"点得到按钮，弹出来的面板看不见"。
+     抬到 175：高过唱片页(150)、浮起来的播放台(160) 和播放列表(170)，
+     又低于拖放遮罩(200)、弹窗(220) 和 toast(300)。 */
+  position:fixed;z-index:175;background:var(--surface);
   border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--sh-pop);padding:9px;
 }
 /* 限高 + 自己滚。全屏里（尤其是手机横过来）视口只有三百来像素高，
@@ -1095,6 +1142,14 @@ body.pip-on .fs-ui{display:none}
 .modal-box.about-box{width:min(430px,100%);padding:0;display:flex;flex-direction:column;
   max-height:min(86vh,660px)}
 .about-scroll{overflow-y:auto;padding:22px 22px 20px}
+
+/* 设置比头几版长了不少（通知栏、软件锁、解锁方式三行），
+   780 高的窗口里整个弹窗会顶出屏幕 —— 「完成」那颗就够不着了。
+   和「关于」同一套解法：弹窗自己限高、中间那坨滚，标题和「完成」钉住不动。 */
+#setModal .modal-box{max-height:min(86vh,660px);display:flex;flex-direction:column}
+#setModal .modal-box > h3{flex:0 0 auto}
+.set-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;margin:0 -4px;padding:0 4px}
+#setModal .modal-actions{flex:0 0 auto}
 
 .about-hero{display:flex;flex-direction:column;align-items:center;text-align:center;
   padding-bottom:18px;border-bottom:1px solid var(--line)}
@@ -1514,6 +1569,60 @@ body.vinyl-wide #lyricBackBtn{display:none}
   .vinyl-title{font-size:16px}
   .vinyl-artist{margin-top:2px}
 }
+/* ============================================================
+   软件锁
+   ---- 默认关着，在「设置 · 软件锁」里开。开着的话，每次**冷启动**
+       拦在最前面一次（切后台回来不拦，见 lockUp 那段）。
+   ---- z-index 350：高过 toast(300)，锁着的时候"已加入 3 个文件"这种话
+       不该从底下冒出来；低过开屏(400)，那一下过场还是留给它。
+   ============================================================ */
+#lockScreen{
+  position:fixed;inset:0;z-index:350;background:var(--paper);
+  display:grid;place-items:center;padding:24px;
+  padding-top:calc(24px + var(--sat));padding-bottom:calc(24px + var(--sab));
+}
+.lock-box{display:flex;flex-direction:column;align-items:center;gap:6px;
+  width:min(300px,100%)}
+.lock-mark{color:var(--mint-500);margin-bottom:2px}
+.lock-title{font-size:17px;font-weight:650;letter-spacing:.04em;color:var(--ink)}
+.lock-hint{font-size:12.5px;color:var(--ink-3);text-align:center;line-height:1.6;
+  margin:0 0 14px;min-height:20px}
+.lock-hint.bad{color:var(--coral)}
+/* 输错的时候抖一下。抖的是整个盒子，不是那几个点 —— 点太小，抖了看不见。 */
+.lock-box.shake{animation:lockShake .34s}
+@keyframes lockShake{
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  45%{transform:translateX(6px)} 70%{transform:translateX(-3px)}
+}
+.lock-pwd{display:flex;flex-direction:column;gap:9px;width:100%}
+.lock-pwd input{width:100%;height:42px;padding:0 13px;border:1px solid var(--line);
+  border-radius:var(--r-sm);outline:none;background:var(--surface);text-align:center;
+  font-family:var(--mono);font-size:15px;letter-spacing:.24em}
+.lock-pwd input:focus{border-color:var(--mint-500)}
+
+/* 九宫格。九个点是绝对定位的，位置由 --px/--py 给（百分比），
+   连线那一层 SVG 用的是同一套百分比坐标（viewBox 0 0 100 100 +
+   preserveAspectRatio=none），所以两边永远对得上，不用在 JS 里换算像素。
+   ⚠️ 描边必须配 vector-effect="non-scaling-stroke"：viewBox 被拉成 100×100
+      之后 stroke-width 会跟着横竖各缩放一次，线会变得又粗又扁。 */
+.pad{position:relative;width:min(238px,66vw);aspect-ratio:1;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pad-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  pointer-events:none}
+.pad-lines polyline{fill:none;stroke:var(--mint-500);stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.pad-dot{position:absolute;left:var(--px);top:var(--py);width:15px;height:15px;
+  margin:-7.5px 0 0 -7.5px;border-radius:50%;background:var(--surface);
+  border:2px solid var(--line);transition:background .12s,border-color .12s}
+.pad-dot.on{background:var(--mint-500);border-color:var(--mint-500)}
+.pad.fail .pad-dot.on{background:var(--coral);border-color:var(--coral)}
+.pad.fail .pad-lines polyline{stroke:var(--coral)}
+
+/* 设置里那两行嵌套的（解锁方式跟在软件锁下面） */
+.set-sub{margin-top:11px;padding-left:11px;border-left:2px solid var(--line-2)}
+.set-sub[hidden]{display:none}
+.set-sublabel{display:block;font-size:12px;color:var(--ink-3);margin-bottom:8px}
+
 /* 没有 hover 的设备上，滑杆只认 .open，不能靠鼠标划过。
    这条必须挂在 hover 能力上而不是屏宽上——窄窗口的桌面端一样有鼠标。 */
 @media (hover:none){
@@ -1542,6 +1651,30 @@ body.vinyl-wide #lyricBackBtn{display:none}
       </svg>
     </div>
     <div class="sp-name">听雨</div>
+  </div>
+</div>
+
+<!-- 软件锁。默认关着，在「设置 · 软件锁」里开。
+     ⚠️ 它必须是**同步**判定的（在 lockLoad 里读 localStorage，不是 IndexedDB）：
+        资料库是 restoreLibrary 异步读回来的，等它回来再决定的话，锁屏之前
+        已经先露了一帧真内容。localStorage 是这儿唯一能同步读到的东西，
+        而这条记录只有一把盐 + 一截摘要，本来也不该跟媒体数据住一起。
+     ⚠️ 它不在 closeTopLayer() 的链子上 —— Esc 和安卓返回键都不该把它收掉。 -->
+<div id="lockScreen" hidden role="dialog" aria-modal="true" aria-label="解锁">
+  <div class="lock-box" id="lockBox">
+    <div class="lock-mark" aria-hidden="true">
+      <!-- ⚠️ 和开屏那处 .sp-mark、顶栏那处 .brand-mark 是**同一个标记的三份**，
+           改一处必须改另两处 -->
+      <svg width="26" height="26" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2.51"  y1="6.09"  x2="1.49"  y2="8.91"/>
+        <line x1="7.04"  y1="3.27"  x2="3.96"  y2="11.73"/>
+        <line x1="11.22" y1="1.39"  x2="6.78"  y2="13.61"/>
+        <line x1="12.86" y1="5.15"  x2="11.14" y2="9.85"/>
+      </svg>
+    </div>
+    <div class="lock-title">听雨</div>
+    <p class="lock-hint" id="lockHint">输入密码解锁</p>
+    <div id="lockBody"></div>
   </div>
 </div>
 
@@ -2069,6 +2202,9 @@ body.vinyl-wide #lyricBackBtn{display:none}
 <div class="modal" id="setModal" hidden>
   <div class="modal-box">
     <h3>设置</h3>
+    <!-- ⚠️ 中间这一坨要能自己滚（见 .set-scroll 那段注释）。加设置项请加在这里面，
+         别漏到外面去 —— 漏出去的那一项会把「完成」顶出屏幕。 -->
+    <div class="set-scroll">
     <div class="set-row">
       <span class="set-label" id="setLayoutLabel">排列方式</span>
       <div class="seg" role="group" aria-labelledby="setLayoutLabel">
@@ -2118,11 +2254,29 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <p class="set-note">手机下拉通知栏里那条听雨的播放控制（锁屏上那颗也是同一个）。</p>
     </div>
     <div class="set-row">
+      <span class="set-label" id="setLockLabel">软件锁</span>
+      <div class="seg" role="group" aria-labelledby="setLockLabel">
+        <button class="seg-btn" id="segLockOff" aria-pressed="true">关闭</button>
+        <button class="seg-btn" id="segLockOn" aria-pressed="false">开启</button>
+      </div>
+      <!-- 电脑端只有密码，所以这一行整个收起来（syncLockUI 里 toggleAttribute） -->
+      <div class="set-sub" id="lockModeRow">
+        <span class="set-sublabel" id="setLockModeLabel">解锁方式</span>
+        <div class="seg" role="group" aria-labelledby="setLockModeLabel">
+          <button class="seg-btn" id="segLockPattern" aria-pressed="true">九宫格</button>
+          <button class="seg-btn" id="segLockPwd" aria-pressed="false">密码</button>
+        </div>
+      </div>
+      <p class="set-note" id="lockNote">打开软件时要先解锁。关掉软件（不是切到后台，是彻底退出）再打开才问一次；
+        切出去再切回来不打扰。忘了密码谁也找不回来 —— 没有服务器，只能清除软件数据重来。</p>
+    </div>
+    <div class="set-row">
       <span class="set-label" id="setWhereLabel">文件位置</span>
       <!-- 按钮上的字和下面那段说明三端各一套，由 syncWhereUI() 填 ——
            同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。 -->
       <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
       <p class="set-note" id="whereNote"></p>
+    </div>
     </div>
     <div class="modal-actions"><button class="btn primary" id="setClose">完成</button></div>
   </div>
@@ -2138,6 +2292,20 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <button class="btn" id="dupCancel">取消导入</button>
       <button class="btn" id="dupKeep">都留着</button>
       <button class="btn primary" id="dupOver">覆盖</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置软件锁：密码输两遍 / 九宫格画两遍。两个流程共用这一个盒子，
+     里面画什么由 renderLockSet() 决定（见「软件锁」那一节）。 -->
+<div class="modal" id="lockModal" hidden>
+  <div class="modal-box">
+    <h3 id="lkTitle">设置软件锁</h3>
+    <p class="modal-note" id="lkNote"></p>
+    <div id="lkBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="lkCancel">取消</button>
+      <button class="btn primary" id="lkOk">确定</button>
     </div>
   </div>
 </div>
@@ -2498,8 +2666,13 @@ const store = {
   // 「当前播放列表」指向哪一列：{kind:"coll"|"queue", id}。
   // 收藏夹也能当播放列表用，所以不能只记 activeQueueId。
   playlist: null,
-  // 个人主页那点东西：显示用的 id 和头像用的是第几号小图案。都是自动生成、能自己改。
-  profile: { name: "", avatar: 0 },
+  /* 个人主页那点东西：显示用的 id、头像用的是第几号小图案（都是自动生成、能自己改），
+     外加一个 never 归零的「历史导入文件数」。
+     ⚠️ 这个数**不是** store.items.length —— 那个是"现在库里有多少"，删一个就少一个。
+        这里说的是"一共进过多少"，删掉的也算数，所以只能自己攒。
+     口径：只有真的新进库的才算（addFiles 里那个 list）。去重跳过的、格式不认识的、
+     重连回离线的、覆盖已有的，都不算「新导入」—— 它们没往库里添新东西。 */
+  profile: { name: "", avatar: 0, imported: 0 },
   /* 播放历史，**按天分桶**：{ "2026-09-15": { itemId: { n:次数, s:秒数 } } }。
      为什么不是一串流水账：榜单要按 今日/本周/本月/本年/累计 五个窗口查，
      流水账得每次全扫一遍、还会无限涨；按天分桶一天一个键、天数封顶，
@@ -2977,6 +3150,9 @@ async function addFiles(files, { silent = false } = {}){
   }
 
   list.forEach(m => { store.items.push(m); store.byId.set(m.id, m); });
+  // 个人主页那个「历史导入」跟着涨。只算 list —— 这一批里真正新进库的那些；
+  // reviving（重连回离线的）和 overwritten（拿新文件换掉旧的）都没往库里添新东西。
+  if (list.length) store.profile.imported += list.length;
   renderAll();
   saveLibrary();
 
@@ -3168,6 +3344,9 @@ async function restoreLibrary(){
     // 存档里有名字就以存档为准，并且撤销启动时那次抢先生成（那个不用落盘了）
     if (typeof prof.name === "string" && prof.name){ store.profile.name = prof.name; profileFresh = false; }
     if (Number.isInteger(prof.avatar)) store.profile.avatar = prof.avatar;
+    // 老存档里没有这个键，读出来是 0。**不回填成"现在库里有多少"** ——
+    // 那是编一个没发生过的历史，而这个数一旦大了就再也下不去了。
+    if (Number.isFinite(prof.imported) && prof.imported > 0) store.profile.imported = Math.floor(prof.imported);
   }
   const hist = await DB.get("meta", "history");
   if (hist && typeof hist === "object") store.history = hist;
@@ -3520,14 +3699,17 @@ const pillsOf = (m, playing) =>
   + (m.lossless ? `<span class="pill">无损</span>` : `<span class="pill lossy">${esc(m.ext.toUpperCase())}</span>`)
   + (playing ? `<span class="pill playing">播放中</span>` : "");
 
-// 用户自己填的标签。那一行是 flex 不换行，标签又是自己随手加的、能加很多个，
-// 所以只摆得下两个，剩下的压成「+N」—— 数得清，也不会把卡片撑歪。
-const LAB_SHOWN = 2;
+// 用户自己填的标签。卡片那一行是 flex 不换行，标签又是自己随手加的、能加很多个，
+// 一个不裁就会顶出卡片外面去。所以整串包进 .tags-run 里由它裁，
+// 装不下时 rollCardTags() 再让里面那层来回滚。
+// **不再折成「+N」** —— 摆得下几个全看卡片多宽，宽窗口下白白把后面的藏了。
+// 列表布局（.m-tags）共用这个函数，那边是 grid 固定高、贴右边排，本来就不裁也不滚。
 function labelPills(m){
   const L = labelsOf(m);
   if (!L.length) return "";
-  return L.slice(0, LAB_SHOWN).map(v => `<span class="pill lab" title="${esc(v)}">${esc(v)}</span>`).join("")
-    + (L.length > LAB_SHOWN ? `<span class="pill lab">+${L.length - LAB_SHOWN}</span>` : "");
+  return `<span class="tags-run" title="${esc(L.join(" · "))}"><span class="roll-text">${
+    L.map(v => `<span class="pill lab" title="${esc(v)}">${esc(v)}</span>`).join("")
+  }</span></span>`;
 }
 
 function cardHTML(m, i){
@@ -3656,6 +3838,11 @@ function renderMain(){
 
   /* ---- 个人主页 ---- */
   if (route.kind === "me"){
+    /* 四格读数。前两格数的是**现在这个资料库**里的累计 —— 和榜单「累计」那一档
+       同一口径（都长在条目自己身上），所以两处对得上。
+       后两格是"有多少"：当前在库的条数，和一去不回的导入总数。 */
+    let plays = 0, played = 0;
+    for (const m of store.items){ plays += m.plays || 0; played += m.played || 0; }
     host.innerHTML = `<div class="view-head"><h1 class="view-title">我的</h1></div>
       <div class="me-card">
         <button class="me-av-big" id="meAv" aria-label="换头像" title="换头像">${avatarOf()}</button>
@@ -3663,6 +3850,12 @@ function renderMain(){
           <div class="me-who-id mono">${esc(displayId())}</div>
           <button class="me-act" id="meRename">改名字</button>
         </div>
+      </div>
+      <div class="me-stats">
+        <div class="me-stat"><b>${plays}</b><i>总播放次数</i></div>
+        <div class="me-stat"><b>${fmtTime(played)}</b><i>总时长</i></div>
+        <div class="me-stat"><b>${store.items.length}</b><i>软件当前文件</i></div>
+        <div class="me-stat"><b>${store.profile.imported || 0}</b><i>历史导入文件</i></div>
       </div>
       <button class="me-link" id="meBoard">
         <span class="me-link-ic">${ICON_BOARD}</span>
@@ -3920,6 +4113,9 @@ function navTo(kind, id = null){
 function showList(){
   $("viewMain").classList.add("active");
   $("viewStage").classList.remove("active");
+  // 从视频那一页退回来，卡片这才第一次有了宽度 —— 藏着的那些量出来是 0，
+  // 之前那几发全空过了，得补一次。内容没变，observer 不会替我补。
+  scheduleTagsRoll();
 }
 function showStage(){
   $("viewMain").classList.remove("active");
@@ -4006,6 +4202,13 @@ function load(m, { autoplay = true, auto = false } = {}){
   if (autoplay) el.play().catch(()=>{});
   loadWaveform(m);
   updateMediaSession(m);
+  // 声道反转是"一个元素一张图"，换了元素（音频↔视频）得给新的那张建起来 ——
+  // 不然切过去之后旗子还亮着、声音却已经不反转了。
+  if (rules.flip) ensureSwapGraph(activeEl);
+  // 面板开着的话重画一次：那一行的名字跟着"现在是音频还是视频"变，
+  // 而换片不重画的话它还停在上一部片子的说法上。徽标上那个词同理。
+  if (!rulePanel.hidden) renderRulePanel();
+  paintRules();
   if (!markPanel.hidden) renderMarkPanel();
   syncFs();
   renderAll();
@@ -4234,6 +4437,9 @@ function setPlaying(p){
   $("btnPlay").setAttribute("aria-label", p ? "暂停" : "播放");
   if (p){
     startKnob();
+    // 播放链路的 AudioContext 可能是"suspended"起来的（比如建图那一刻不在用户
+    // 手势里）。真放起来了再叫一次 —— 这时候一定有手势，唤得醒。
+    resumePlayAC();
     // 真的放起来了才算听了一回。旗子在 load() 里放平，所以"暂停再播"还是
     // 同一次，而"换一首再回来"是新的一次。
     const m = player.current;
@@ -4254,6 +4460,10 @@ function setPlaying(p){
   fsPaint();
   syncVinylSpin();
   if ("mediaSession" in navigator && notifOn()) navigator.mediaSession.playbackState = p ? "playing" : "paused";
+  // 安卓那条通知：在放没有得立刻告诉系统（那颗按钮要在播放/暂停之间换脸），不能等节流。
+  // 顺带 syncNative —— 开关一直开着、但之前还没载入过任何东西时，是这一刻才该起服务的。
+  syncNative();
+  nativeState(true);
 }
 /* ---- 听了多少：播放次数 + 累计时长 ----
    plays 在 setPlaying(true) 里加，一次载入只加一次（暂停再播不算第二遍）。
@@ -4292,6 +4502,7 @@ function onTime(){
   if ("mediaSession" in navigator && notifOn() && navigator.mediaSession.setPositionState && isFinite(d) && d > 0){
     try{ navigator.mediaSession.setPositionState({ duration:d, position:Math.min(activeEl.currentTime,d), playbackRate:rules.rate }); }catch{}
   }
+  nativeState(false);      // 自己带五秒节流；锁屏上那条进度是系统按 PlaybackState 自己推的
 }
 
 /* ============================================================
@@ -4310,6 +4521,11 @@ const rules = {
   quota: 0,           // 0 = 关；N = 放完 N 首就停
   quotaDone: 0,
   timer: null,        // { at:到期时间戳, min:15|30|60|0, label:"30 分"|"23:00" }
+  /* 声道反转 / 画面镜像。**只有这一个旗子**：面板里也只占一行，
+     跟着当前文件换名字（音频叫「声道反转」，视频叫「视频镜像」，
+     开镜像的同时把声道也翻过来）。分两个开关的话，"都开着算不算反两次"
+     就成了用户得自己记住的规矩，不如合成一个。 */
+  flip: false,
 };
 const rulePanel = $("rulePanel");
 const markPanel = $("markPanel");
@@ -4324,6 +4540,70 @@ function setShuffle(on){ rules.shuffle = !!on; bag.ids = []; bag.sig = ""; paint
 function setLoop(v){ rules.loop = v; rules.loopDone = 0; paintRules(); }
 function setLoopLimit(n){ rules.loopLimit = +n || 0; rules.loopDone = 0; paintRules(); }
 function setQuota(n){ rules.quota = +n || 0; rules.quotaDone = 0; paintRules(); }
+
+/* ---- 声道反转 / 画面镜像 ----
+   画面那一半是 CSS（.video-wrap video.mirror 一句 transform:scaleX(-1)），
+   声音那一半得动 Web Audio 的图。
+
+   ⚠️ createMediaElementSource **一个元素只能调一次**，而且调完这个元素的声音
+      就改从图里出、不再直接输出了。所以这儿的分工是：
+        · 没开过的人，一张图都不建，这条路一分钱开销没有；
+        · 一旦开过一次，这个元素就永久走图了 —— 图里"不反转"那一路是 L→L、R→R，
+          听感和直连一模一样，于是开关就成了纯粹的连线切换，不用反复建图
+          （反复建也是不可能的，一个元素只能建一次）。
+      两个媒体元素（audioEl / videoEl）各建各的，因为切歌是换元素。
+   ⚠️ 单声道源安全：splitter 的输入按 speakers 规则上混到两声道，
+      单声道在 L/R 上本来就相等，换过来还是它自己。
+   ⚠️ context 单独开一个，**不跟 audioCtx() 那个共用** —— 那个是给波形做离线解码的，
+      注释里写着"closed 就重建一个"，万一它被重建，挂在旧 context 上的播放图就哑了。 */
+let playAC = null;
+const swapGraph = new Map();               // 元素 -> { split, merge }
+function resumePlayAC(){
+  if (playAC && playAC.state === "suspended") playAC.resume().catch(() => {});
+}
+// 连线的两种接法。merge 的两个输入是相加的，所以换接法前必须先全断掉，
+// 不然 L 会同时进 L 和 R —— 听感上就是"没换，还响了两次"。
+function wireSwap(g, swapped){
+  g.split.disconnect();
+  if (swapped){ g.split.connect(g.merge, 0, 1); g.split.connect(g.merge, 1, 0); }
+  else        { g.split.connect(g.merge, 0, 0); g.split.connect(g.merge, 1, 1); }
+}
+function ensureSwapGraph(el){
+  const had = swapGraph.get(el);
+  if (had) return had;
+  try{
+    if (!playAC || playAC.state === "closed")
+      playAC = new (window.AudioContext || window.webkitAudioContext)();
+    const split = playAC.createChannelSplitter(2);
+    const merge = playAC.createChannelMerger(2);
+    // src 得留着引用：图里的节点靠 JS 引用 + 连线活着，撒手不管有被回收的风险
+    const src = playAC.createMediaElementSource(el);
+    src.connect(split);
+    merge.connect(playAC.destination);
+    const g = { src, split, merge };
+    swapGraph.set(el, g);
+    wireSwap(g, !!rules.flip);
+    resumePlayAC();
+    return g;
+  }catch{
+    // 建不出来（内核不支持、context 配额用完……）就当没有这一半：
+    // 画面照翻，声音不翻 —— 总比整条播放链路哑掉强。
+    return null;
+  }
+}
+function applyFlip(){
+  videoEl.classList.toggle("mirror", !!rules.flip);
+  for (const g of swapGraph.values()) wireSwap(g, !!rules.flip);
+  if (rules.flip) resumePlayAC();
+}
+function setFlip(v){
+  rules.flip = !!v;
+  if (rules.flip) ensureSwapGraph(activeEl);   // 先建图（它会按当前旗子接好线）
+  applyFlip();                                 // 再把所有已建的图刷一遍
+  paintRules();
+}
+// 面板里那一行跟着当前文件换名字。视频说"画面"，音频说"声音"。
+const flipIsVideo = () => playingVideo();
 
 function startTicker(){ stopTicker(); ruleTicker = setInterval(tickRules, 1000); }
 function stopTicker(){ if (ruleTicker){ clearInterval(ruleTicker); ruleTicker = 0; } }
@@ -4361,7 +4641,8 @@ function armClock(hhmm){
 
 // 按钮上的点和读数。一次只报最紧的那一件，不堆 —— 堆起来就没人看了。
 function paintRules(){
-  const busy = rules.shuffle || rules.loop !== "off" || rules.quota > 0 || !!rules.timer || rules.rate !== 1;
+  const busy = rules.shuffle || rules.loop !== "off" || rules.quota > 0 || !!rules.timer
+            || rules.rate !== 1 || rules.flip;
   $("btnRules").classList.toggle("on", busy);
   let text = "";
   if (rules.timer){
@@ -4376,6 +4657,10 @@ function paintRules(){
     text = "随机";
   } else if (rules.rate !== 1){
     text = rules.rate + "×";
+  } else if (rules.flip){
+    // 排在最末：它是这儿唯一一个"跟当前文件是什么"有关的读数，
+    // 有别的规则在管着的时候，那件更该被看见。
+    text = flipIsVideo() ? "镜像" : "声道反转";
   }
   $("ruleBadge").textContent = text;
   $("ruleBadge").hidden = !text;
@@ -4391,8 +4676,18 @@ function segHTML(label, act, cur, opts, note){
 function renderRulePanel(){
   const clock = rules.timer && !rules.timer.min
     ? new Date(rules.timer.at).toTimeString().slice(0, 5) : "";
+  /* 「声道 / 镜像」那一行。放视频的时候它说的是画面，放音频（或者还没播）的时候
+     说的是声音 —— 底下是同一个旗子，只是换了个说法，所以用户不会以为自己
+     在同时管两件事。 */
+  const vid = flipIsVideo();
+  const flipRow = segHTML(vid ? "镜像" : "声道", "flip", rules.flip ? 1 : 0,
+      vid ? [{ v:0, t:"原样" }, { v:1, t:"镜像" }]
+          : [{ v:0, t:"原样" }, { v:1, t:"反转" }],
+      vid ? "画面左右翻过来，声音也跟着反。"
+          : "左右声道换个个儿。放视频时这一行会变成「视频镜像」。");
   rulePanel.innerHTML =
       segHTML("速度", "rate", rules.rate, RATES.map(r => ({ v:r, t:r + "×" })))
+    + flipRow
     + segHTML("顺序", "shuffle", rules.shuffle ? 1 : 0, [{ v:0, t:"顺序" }, { v:1, t:"随机" }])
     + segHTML("循环", "loop", rules.loop,
               [{ v:"off", t:"关闭" }, { v:"one", t:"单曲" }, { v:"all", t:"列表" }],
@@ -4454,6 +4749,7 @@ rulePanel.addEventListener("click", e => {
   else if (act === "loop")    setLoop(v);
   else if (act === "limit")   setLoopLimit(v);
   else if (act === "quota")   setQuota(v);
+  else if (act === "flip")    setFlip(!!v);
   else if (act === "timer")   v ? armCountdown(v) : (clearTimer(), paintRules());
   renderRulePanel();
 });
@@ -4640,11 +4936,44 @@ function setTitle(box, text){
   box.style.setProperty("--roll-dur", clamp(over / 26, 4, 14).toFixed(1) + "s");
   box.classList.add("rolling");
 }
+
+/* ---- 卡片上那一串用户标签：装不下就自己来回滚 ----
+   和 setTitle 是同一套做法（裁在父层、推里面那层、共用 titleRoll 那条 keyframes），
+   区别只在于这里量的是"一串药丸"而不是一行字，而且药丸是每次重画卡片时新建的，
+   没法在渲染的时候顺手量 —— innerHTML 刚写完还没排版，量出来是 0。
+
+   所以挂个 observer 盯着 #viewMain：内容一变，下一帧整页重量一遍。
+   用 observer 而不是在 renderMain() 的每个调用点上补一句 —— 全文件十几处
+   直接调它，漏一处就是那一页的标签滚不起来，而且这种漏是静默的。 */
+let tagsTick = 0;
+function rollCardTags(){
+  tagsTick = 0;
+  for (const run of $("viewMain").querySelectorAll(".tags-run")){
+    run.classList.remove("rolling");
+    run.style.removeProperty("--roll");
+    const inner = run.firstElementChild;
+    if (!inner) continue;
+    const avail = run.clientWidth;
+    if (avail <= 0 || reduceMotion()) continue;    // 这一页没在台前（比如正全屏看视频），先不量
+    const over = inner.getBoundingClientRect().width - avail;
+    if (over <= 8) continue;                       // 差一点点就算了，滚起来更晃眼
+    run.style.setProperty("--roll", `-${Math.round(over + 6)}px`);
+    run.style.setProperty("--roll-dur", clamp(over / 22, 4, 14).toFixed(1) + "s");
+    run.classList.add("rolling");
+  }
+}
+function scheduleTagsRoll(){
+  if (tagsTick) return;
+  tagsTick = requestAnimationFrame(rollCardTags);
+}
+new MutationObserver(scheduleTagsRoll).observe($("viewMain"), { childList: true });
+
 let rollTimer = 0;
 addEventListener("resize", () => {
   clearTimeout(rollTimer);
   rollTimer = setTimeout(() => {
     rollPlText();                       // 播放列表开着的话，宽度变了得按新宽度重量一遍
+    rollCardTags();                     // 卡片宽了窄了，标签那串滚不滚得跟着重算
     if (!player.current) return;
     setTitle($("deckTitle"), titleOf(player.current));
     if (fsActive()) setTitle($("fsTitle"), titleOf(player.current));
@@ -5062,7 +5391,17 @@ function drawPeek(){
   // 盒子宽度是固定的，高度按片子自己的比例算 —— 竖屏视频别被拉成扁的。
   const w = 168, h = Math.max(1, Math.round(168 * peekEl.videoHeight / peekEl.videoWidth));
   if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
-  try{ cv.getContext("2d").drawImage(peekEl, 0, 0, w, h); }catch{}
+  // ⚠️ 开了镜像，缩略图也得跟着翻 —— 这是"这一格画面长什么样"，画面上是反的、
+  // 缩略图是正的，看着像两个片子。save/restore 不能省：canvas 的变换是累加的，
+  // 而 cv.width 那句只在尺寸变了时才执行，指望它顺手清掉变换是不牢靠的。
+  // （存在库里的封面帧**不翻**。那代表的是"这个文件"本身，不是你现在的看法。）
+  const g = cv.getContext("2d");
+  g.save();
+  try{
+    if (rules.flip){ g.translate(w, 0); g.scale(-1, 1); }
+    g.drawImage(peekEl, 0, 0, w, h);
+  }catch{}
+  g.restore();
   // 盒子高度不用管：#peekCanvas 是 width:100% + height:auto，自己保住比例。
 }
 
@@ -5632,6 +5971,9 @@ function initMediaSession(){
   set("seekto", d => { if (d.seekTime != null) activeEl.currentTime = d.seekTime; });
 }
 function updateMediaSession(m){
+  if (!m) return;
+  // 安卓走原生那条路（见下面那一大段）。它自己有"该不该开"的判断，不用在这儿拦。
+  if (CapMedia){ syncNative(); nativeMeta(m); return; }
   if (!("mediaSession" in navigator) || !notifOn()) return;
   const t = m.tags || {};
   navigator.mediaSession.metadata = new MediaMetadata({
@@ -5645,11 +5987,135 @@ function updateMediaSession(m){
 /* 设置里那颗「通知栏播放控制」。默认开 —— 老存档里没这个键，按"没关过"算。 */
 const notifOn = () => store.settings.mediaSession !== false;
 
+/* ============================================================
+   9b. 安卓上的「通知栏播放控制」—— 真的那一条
+   ---- 上面那套 navigator.mediaSession 在浏览器里好使，在 WebView 里
+        **一行都不生效**：那是浏览器自己 UI 层接的线，WebView 没有那一层，
+        所有 try/catch 都安安静静地把它吞了。所以这台设备上，
+        设置里那颗开关拨来拨去，通知栏里永远是空的。
+   ---- 安卓另有一条路：MediaPlugin（翻译）+ MediaService（真正那条通知，
+        前台服务，带 MediaSession 和媒体按钮）。判据是 CapMedia 在不在，
+        不是"是不是安卓"—— 桌面壳里两个都没有，照样走上面那套。
+   ============================================================ */
+let nativeOn = false;          // 原生那条通知现在开着没有
+let nativePushedAt = 0;
+
+/* 原生那条路只在"设置开着 且 真的载入了一条"时才起来。
+   光是打开软件就起一条前台服务、通知栏里杵着「听雨」两个字，那是白打扰。 */
+function nativeWant(){ return !!(CapMedia && notifOn() && player.current); }
+
+/* 开/关。开关两个方向都走这一个收口 ——
+   ⚠️ 关掉的时候光"以后不再推元数据"是不够的：那条通知会一直挂在通知栏里不走，
+   得真的把服务停掉（setActive false 那边会 cancel + stopForeground）。 */
+function syncNative(){
+  if (!CapMedia) return;
+  const want = nativeWant();
+  if (want === nativeOn) return;
+  nativeOn = want;
+  try {
+    const r = CapMedia.setActive({ on: want });
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
+  if (want){ nativeMeta(player.current); nativeState(true); }
+}
+
+/* 开关一拨就得看得见动静。
+   ⚠️ 上面 syncNative 的规矩是"载入了一条才起服务"，那是为了不让软件一打开
+   通知栏里就杵着一条空的「听雨」。可代价是：拨到「显示」的那一刻什么都不发生，
+   而用户恰恰是拿这一点判断开关有没有生效的 —— 这条正是当初报上来的问题。
+   所以拨到「显示」时单独踢一脚：先起服务把那条通知亮出来，曲名等信息随后填。 */
+function nativeKick(){
+  if (!CapMedia) return;
+  if (!notifOn()){ syncNative(); return; }      // 关：交给 syncNative 把它撤下来
+  if (nativeOn) return;
+  nativeOn = true;
+  try {
+    const r = CapMedia.setActive({ on: true });
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
+  if (player.current){ nativeMeta(player.current); nativeState(true); }
+}
+
+/* 曲名/作者/专辑/封面/时长。换曲目时推一次，不用每帧推。 */
+function nativeMeta(m){
+  if (!CapMedia || !nativeOn || !m) return;
+  const t = m.tags || {};
+  // 封面是 blob URL，原生存不着，只能自己读成 base64 递过去（异步，晚一点到没关系）。
+  coverArt(m).then(art => {
+    try {
+      const r = CapMedia.setMeta({ title: titleOf(m), artist: t.artist || "", album: t.album || "",
+                                   duration: m.duration || 0, art });
+      if (r && r.catch) r.catch(() => {});
+    } catch (e){}
+  });
+}
+
+/* 封面 → base64（不带 data: 前缀）。
+   ⚠️ 设个上限：一张几兆的图既要在桥上来回搬，又要在原生那边解码，
+   为了一条通知不值得。超了就不给图 —— 没有封面的通知，好过为它卡一下。 */
+function coverArt(m){
+  return new Promise(res => {
+    const no = () => res(null);
+    try {
+      if (!m || !m.coverUrl || !window.fetch || !window.FileReader) return no();
+      fetch(m.coverUrl).then(r => r.blob()).then(b => {
+        if (!b || b.size > 400 * 1024) return no();
+        const fr = new FileReader();
+        fr.onload = () => {
+          const s = String(fr.result || "");
+          const i = s.indexOf(",");            // "data:image/jpeg;base64,xxxx"
+          res(i > 0 ? s.slice(i + 1) : null);
+        };
+        fr.onerror = no;
+        fr.readAsDataURL(b);
+      }).catch(no);
+    } catch (e){ no(); }
+  });
+}
+
+/* 在放没有 / 放到哪儿了 / 几倍速。
+   ⚠️ 带节流：onTime 一秒来四回，每回都发一次 Intent 是白费。
+   锁屏上那个进度条是系统按 PlaybackState 自己往前推的，不需要我们喂得那么勤。 */
+function nativeState(force){
+  if (!CapMedia || !nativeOn) return;
+  const now = Date.now();
+  if (!force && now - nativePushedAt < 5000) return;
+  nativePushedAt = now;
+  try {
+    const r = CapMedia.setState({ playing: !!player.playing,
+                                  position: activeEl.currentTime || 0,
+                                  speed: rules.rate || 1 });
+    if (r && r.catch) r.catch(() => {});
+  } catch (e){}
+}
+
+/* 通知栏那三颗按钮 / 耳机线控 / 锁屏点下来。
+   动作名和 MediaService 里 cb 那六个一一对应。
+   ⚠️ 这里**只转给页面自己那套现成的路**（next/prev 要记播放次数、要落盘位置，
+   那些都在 next()/prev() 里）—— 在这儿另起一套的话两边迟早对不上。 */
+function nativeAction(d){
+  const a = d && d.action;
+  try {
+    if (a === "play")       { if (activeEl.paused) activeEl.play().catch(() => {}); }
+    else if (a === "pause") { activeEl.pause(); }
+    else if (a === "stop")  { activeEl.pause(); activeEl.currentTime = 0; }
+    else if (a === "next")  next();
+    else if (a === "prev")  prev();
+    else if (a === "seek" && typeof d.position === "number"){
+      const dur = activeEl.duration || player.current?.duration || 0;
+      activeEl.currentTime = dur ? clamp(d.position, 0, dur) : Math.max(0, d.position);
+      onTime();
+    }
+  } catch (e){}
+  nativeState(true);
+}
+
 /* 开关两个方向都走这一个收口。
    ⚠️ 关掉的时候光"以后不再设 metadata"是不够的：会话一旦建起来，手机下拉通知栏
    里那一条就挂在那儿不走，得三样一起撤——元数据清空、playbackState 归 "none"、
    动作处理逐个摘掉。反过来开的时候也要把动作重新挂上（initMediaSession 是幂等的）。 */
 function applyMediaSession(){
+  if (CapMedia){ syncNative(); return; }
   if (!("mediaSession" in navigator)) return;
   const ms = navigator.mediaSession;
   if (!notifOn()){
@@ -5788,7 +6254,9 @@ function refreshPlayingTitle(m){
   if (!player.current || player.current.id !== m.id) return;
   setTitle($("deckTitle"), titleOf(m));
   if (fsActive()) setTitle($("fsTitle"), titleOf(m));
-  if ("mediaSession" in navigator) updateMediaSession(m);
+  // 三端各一条路：安卓是原生那条通知，网页/桌面壳是 navigator.mediaSession。
+  // updateMediaSession 自己会分（CapMedia 在就走原生）。
+  updateMediaSession(m);
 }
 
 let editing = null;
@@ -6075,8 +6543,314 @@ function setNotif(v){
   store.settings.mediaSession = on;
   syncNotifUI(); saveLibrary();
   applyMediaSession();          // 当场生效，不用等下一首
+  // 安卓上还得多这一下（理由见 nativeKick 上面那段）：syncNative 的规矩是
+  // "载入了一条才起服务"，拨开关的那一刻通知栏里什么都不会变。
+  if (on) nativeKick();
 }
 for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).addEventListener("click", () => setNotif(k));
+
+/* ============================================================
+   10·5. 软件锁
+   ---- 用户口径：默认关，在设置里开。电脑端只有密码；手机端密码和九宫格二选一，
+        设置里挑，默认九宫格。**只在启动时解锁一次** —— 关掉软件（进程没了）
+        再打开才问，切到后台再切回来不打扰。
+   ---- ⚠️ 记录存在 localStorage 而不是 IndexedDB，这不是图省事：
+        资料库是 restoreLibrary 异步读回来的，等它回来再决定锁不锁，
+        锁屏之前已经先露了一帧真内容。localStorage 是这儿唯一能**同步**读到的
+        存储，而这条记录本来也只有一把盐 + 一截摘要，不该跟媒体数据住一起。
+   ---- ⚠️ 没有服务器，也没有"找回密码"这回事。忘了就只能清数据 ——
+        设置那行下面的说明里写死了这一点，别指望用户自己想到。
+   ============================================================ */
+const LOCK_KEY = "tingyu.lock";
+const LOCK_ITER = 120000;          // PBKDF2 轮数：桌面上约 0.1 秒，手机上半秒以内
+const LOCK_MIN = 4;                // 九宫格最少连几个点
+const PAD_C = [15, 50, 85];        // 九个点的圆心（百分比），SVG 那边是同一套数
+
+// localStorage 在个别隐私模式下会直接抛，所以整条路都裹上。
+function lsGet(k){ try{ return localStorage.getItem(k); }catch{ return null; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); return true; }catch{ return false; } }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch{} }
+
+/* 锁的状态。salt/hash 只在要验证的时候用得上；界面只关心 on 和 mode。 */
+let lock = { on:false, mode:"pattern", salt:"", hash:"" };
+
+function lockLoad(){
+  const raw = lsGet(LOCK_KEY);
+  if (!raw) return;
+  try{
+    const o = JSON.parse(raw);
+    if (o && o.on && o.hash && o.salt){
+      lock = { on:true,
+               mode: o.mode === "password" ? "password" : "pattern",
+               salt: String(o.salt), hash: String(o.hash) };
+    }
+  }catch{}                       // 读坏了当没锁 —— 总比把用户关在外面强
+}
+function lockSave(){
+  if (!lock.on){ lsDel(LOCK_KEY); return true; }
+  return lsSet(LOCK_KEY, JSON.stringify({ on:true, mode:lock.mode, salt:lock.salt, hash:lock.hash }));
+}
+
+async function lockDigest(text, salt){
+  // 域分隔符：同一个 salt 下，密码和图案不可能撞出同一截摘要
+  const msg = new TextEncoder().encode("tingyu/" + lock.mode + "/" + text);
+  const key = await crypto.subtle.importKey("raw", msg, "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name:"PBKDF2", salt: new TextEncoder().encode(salt), iterations: LOCK_ITER, hash:"SHA-256" },
+    key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function lockReady(){
+  return !!(window.crypto && crypto.subtle && crypto.getRandomValues);
+}
+function newSalt(){
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return [...a].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* ---- 九宫格 ---- */
+function padHTML(id){
+  const dots = [];
+  for (let i = 0; i < 9; i++)
+    dots.push(`<span class="pad-dot" data-d="${i}"
+      style="--px:${PAD_C[i % 3]}%;--py:${PAD_C[(i / 3) | 0]}%"></span>`);
+  return `<div class="pad" id="${id}">
+      <svg class="pad-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points=""></polyline></svg>
+      ${dots.join("")}</div>`;
+}
+/* 把一串点号画出来。live 是手指当前的位置（pad 内的百分比），不给就不画那半截。 */
+function padDraw(root, seq, live){
+  const pl = root.querySelector("polyline");
+  const pts = seq.map(i => `${PAD_C[i % 3]},${PAD_C[(i / 3) | 0]}`);
+  if (live) pts.push(`${live.x.toFixed(1)},${live.y.toFixed(1)}`);
+  pl.setAttribute("points", pts.join(" "));
+  root.querySelectorAll(".pad-dot").forEach(d =>
+    d.classList.toggle("on", seq.includes(+d.dataset.d)));
+}
+/* 手势绑定。done(seq) 在抬手时调一次 —— 不管是设置流程还是解锁流程，
+   收口都在调用方那边，这里只管认点。 */
+function bindPad(root, done){
+  let seq = [], cap = -1;
+  const pct = e => {
+    const r = root.getBoundingClientRect();
+    return { x:(e.clientX - r.left) / r.width * 100, y:(e.clientY - r.top) / r.height * 100 };
+  };
+  // 最近的一个点，超过 14% 就当没够着 —— 九宫格的点本身才 15px 宽，
+  // 不给人留余量的话手指根本连不上。
+  const hit = p => {
+    let best = -1, bd = 1e9;
+    for (let i = 0; i < 9; i++){
+      const d = Math.hypot(p.x - PAD_C[i % 3], p.y - PAD_C[(i / 3) | 0]);
+      if (d < bd){ bd = d; best = i; }
+    }
+    return bd <= 14 ? best : -1;
+  };
+  const push = p => {
+    const i = hit(p);
+    if (i >= 0 && !seq.includes(i)){ seq.push(i); }
+    padDraw(root, seq, i < 0 ? p : null);
+  };
+  root.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    root.classList.remove("fail");
+    seq = []; cap = e.pointerId;
+    try{ root.setPointerCapture(e.pointerId); }catch{}
+    push(pct(e));
+  });
+  root.addEventListener("pointermove", e => {
+    if (cap !== e.pointerId) return;
+    push(pct(e));
+  });
+  const end = e => {
+    if (cap !== e.pointerId) return;
+    cap = -1;
+    try{ root.releasePointerCapture(e.pointerId); }catch{}
+    padDraw(root, seq, null);
+    const out = seq; seq = [];
+    done(out);
+  };
+  root.addEventListener("pointerup", end);
+  root.addEventListener("pointercancel", end);
+}
+
+/* ---- 锁屏本身 ---- */
+const lockUp = () => lock.on && !$("lockScreen").hidden;
+let lockTries = 0;
+function lockHint(msg, bad){
+  const h = $("lockHint");
+  h.textContent = msg;
+  h.classList.toggle("bad", !!bad);
+}
+function lockShake(){
+  const b = $("lockBox");
+  b.classList.remove("shake");
+  void b.offsetWidth;                 // 逼一次重排，不然连输错两次第二下不抖
+  b.classList.add("shake");
+}
+function showLock(){
+  lockTries = 0;
+  const pw = lock.mode === "password";
+  lockHint(pw ? "输入密码解锁" : "连点至少 " + LOCK_MIN + " 个点解锁", false);
+  $("lockBody").innerHTML = pw
+    ? `<div class="lock-pwd">
+         <input id="lockPwdIn" type="password" autocomplete="off" inputmode="text"
+                aria-label="密码" placeholder="密码">
+         <button class="btn primary" id="lockGo">解锁</button>
+       </div>`
+    : padHTML("lockPad");
+  if (pw){
+    $("lockGo").addEventListener("click", () => lockTryPwd($("lockPwdIn").value));
+    $("lockPwdIn").addEventListener("keydown", e => {
+      if (e.key === "Enter"){ e.preventDefault(); lockTryPwd($("lockPwdIn").value); }
+    });
+    setTimeout(() => { try{ $("lockPwdIn").focus(); }catch{} }, 60);
+  } else {
+    bindPad($("lockPad"), seq => {
+      if (seq.length < LOCK_MIN){ lockHint("至少连 " + LOCK_MIN + " 个点", true); return; }
+      lockTryPwd(seq.join(""));
+    });
+  }
+  $("lockScreen").hidden = false;
+}
+function lockBad(msg){
+  lockTries++;
+  lockShake();
+  lockHint(msg, true);
+  const el = $("lockPwdIn");
+  if (el){ el.value = ""; try{ el.focus(); }catch{} }
+  // 图案**留着别擦**，只把它染红 —— 擦了的话"红一下"就没东西可红了。
+  // 下一次按下时 bindPad 会把 fail 摘掉、seq 归零，等于自动清干净。
+  const pad = $("lockPad");
+  if (pad) pad.classList.add("fail");
+}
+async function lockTryPwd(text){
+  if (!lock.on || !text) return;
+  let d = "";
+  try{ d = await lockDigest(String(text), lock.salt); }catch{ lockHint("这个环境算不了摘要", true); return; }
+  if (d !== lock.hash){ lockBad(lock.mode === "password" ? "密码不对" : "图案不对"); return; }
+  lockUnlocked();
+}
+function lockUnlocked(){
+  $("lockScreen").hidden = true;
+  lockHint("", false);
+  $("lockBody").innerHTML = "";
+}
+
+/* ---- 设置里那一行 ---- */
+const lockOn = () => !!lock.on;
+function syncLockUI(){
+  $("segLockOn").setAttribute("aria-pressed", String(lockOn()));
+  $("segLockOff").setAttribute("aria-pressed", String(!lockOn()));
+  $("segLockPattern").setAttribute("aria-pressed", String(lock.mode === "pattern"));
+  $("segLockPwd").setAttribute("aria-pressed", String(lock.mode === "password"));
+  // 电脑端只有密码 —— 这一行整个收起来。判据用的是窄屏断点，
+  // 和全项目"电脑端 / 手机端"是同一把尺子（见 narrow()）。
+  $("lockModeRow").toggleAttribute("hidden", !narrow());
+  $("lockNote").textContent = lockReady()
+    ? "打开软件时要先解锁。关掉软件（不是切到后台，是彻底退出）再打开才问一次；"
+      + "切出去再切回来不打扰。忘了密码谁也找不回来 —— 没有服务器，只能清除软件数据重来。"
+    : "这个环境不支持加密（crypto.subtle 不可用），软件锁打不开。";
+}
+
+/* 设置流程：密码输两遍 / 九宫格画两遍，两遍一样才落盘。
+   画第二遍的时候把第一遍的点画成灰的当"进度"提示。 */
+let lkStage = 0, lkFirst = "";
+function openLockSet(){
+  if (!lockReady()){ toast("这个环境不支持加密，软件锁开不了"); return; }
+  // 电脑端只有密码这一条路。挡在"设"这一步，不是挡在"解"那一步 ——
+  // 万一有人在窄窗口下画了个九宫格、回头把窗口拉宽了，showLock 得认那把旧锁，
+  // 不认就等于把人锁在门外了。
+  if (!narrow()) lock.mode = "password";
+  lkStage = 0; lkFirst = "";
+  renderLockSet();
+  $("lockModal").hidden = false;
+}
+function closeLockSet(){ $("lockModal").hidden = true; $("lkBody").innerHTML = ""; }
+function renderLockSet(){
+  const pw = lock.mode === "password";
+  $("lkTitle").textContent = pw ? "设置密码" : "设置九宫格";
+  $("lkNote").textContent = lkStage === 0
+    ? (pw ? "输一遍要用的密码。" : "连至少 " + LOCK_MIN + " 个点。")
+    : (pw ? "再输一遍，两遍一样才算数。" : "再画一遍刚才那个，两遍一样才算数。");
+  $("lkOk").textContent = lkStage === 0 ? "下一步" : "完成";
+  $("lkBody").innerHTML = pw
+    ? `<div class="lock-pwd">
+         <input id="lkPwd" type="password" autocomplete="new-password" aria-label="密码"
+                placeholder="${lkStage === 0 ? "新密码" : "再输一遍"}">
+       </div>`
+    : padHTML("lkPad");
+  if (pw){
+    setTimeout(() => { try{ $("lkPwd").focus(); }catch{} }, 60);
+    $("lkPwd").addEventListener("keydown", e => {
+      if (e.key === "Enter"){ e.preventDefault(); $("lkOk").click(); }
+    });
+  } else {
+    bindPad($("lkPad"), seq => {
+      $("lkPad").classList.remove("fail");
+      if (seq.length < LOCK_MIN){ $("lkNote").textContent = "至少连 " + LOCK_MIN + " 个点，再来一次。"; padDraw($("lkPad"), [], null); return; }
+      lkPadDone(seq.join(""));
+    });
+  }
+}
+async function lkPadDone(text){
+  if (lkStage === 0){ lkFirst = text; lkStage = 1; renderLockSet(); return; }
+  if (text !== lkFirst){ lkStage = 0; lkFirst = ""; $("lkPad").classList.add("fail"); renderLockSet(); $("lkNote").textContent = "两次不一样，重来一遍。"; return; }
+  await commitLock(text);
+}
+async function commitLock(text){
+  lock.salt = newSalt();
+  lock.hash = await lockDigest(text, lock.salt);
+  lock.on = true;
+  if (!lockSave()){
+    lock.on = false;
+    toast("这个环境存不下锁，没设成");
+    closeLockSet(); syncLockUI();
+    return;
+  }
+  closeLockSet(); syncLockUI();
+  toast("软件锁已开，下次打开软件时生效");
+}
+$("lkOk").addEventListener("click", async () => {
+  if (lock.mode === "password"){
+    const v = $("lkPwd").value;
+    if (v.length < 4){ $("lkNote").textContent = "密码至少 4 位。"; return; }
+    if (lkStage === 0){ lkFirst = v; lkStage = 1; renderLockSet(); return; }
+    if (v !== lkFirst){ lkStage = 0; lkFirst = ""; renderLockSet(); $("lkNote").textContent = "两次不一样，重来一遍。"; return; }
+    await commitLock(v);
+  } else {
+    // 九宫格是抬手就判的，这颗键在那一档只是"重来一次"
+    lkStage = 0; lkFirst = ""; renderLockSet();
+  }
+});
+$("lkCancel").addEventListener("click", closeLockSet);
+$("lockModal").addEventListener("pointerdown", e => { if (e.target === $("lockModal")) closeLockSet(); });
+
+function setLockOn(on){
+  if (on === lockOn()) return;
+  if (on){ openLockSet(); return; }       // 开 = 先设一遍，设成了才算开
+  lock = { on:false, mode:lock.mode, salt:"", hash:"" };
+  lockSave(); syncLockUI();
+  toast("软件锁已关");
+}
+function setLockMode(mode){
+  const next = mode === "password" ? "password" : "pattern";
+  if (lock.mode === next) return;
+  if (lockOn()){
+    // 已经开着的时候换方式等于要重设一遍：老摘要掺了方式做域分隔，跟新方式对不上，
+    // 不重设的话下次打开就永远解不开了。所以先把话说清楚再动手。
+    askConfirm("换解锁方式", "换一种解锁方式，原来的密码或图案就用不上了，得重新设一遍。",
+      "重设", () => { lock.mode = next; syncLockUI(); openLockSet(); });
+    return;
+  }
+  lock.mode = next;
+  syncLockUI();
+}
+$("segLockOn").addEventListener("click", () => setLockOn(true));
+$("segLockOff").addEventListener("click", () => setLockOn(false));
+$("segLockPattern").addEventListener("click", () => setLockMode("pattern"));
+$("segLockPwd").addEventListener("click", () => setLockMode("password"));
 
 $("navSettings").addEventListener("click", () => {
   setDrawer(false);            // 手机上抽屉让位给设置弹窗
@@ -6084,6 +6858,7 @@ $("navSettings").addEventListener("click", () => {
   syncResumeUI();
   syncImportUI();
   syncNotifUI();
+  syncLockUI();
   setImpHelp(false);
   syncWhereUI();               // 「文件位置」那一行按平台现填（壳 / 安卓 / 网页各一套）
   $("setModal").hidden = false;
@@ -7483,9 +8258,18 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.3";
+const APP_VERSION = "0.1.4";
 
 const CHANGELOG = [
+  { v: "0.1.4", date: "2026-09-15", title: "统计、镜像与软件锁",
+    items: [
+      "我的：多了四格读数 —— 总播放次数、总时长、软件当前文件、历史导入文件",
+      "播放设置：多了一行「声道 / 镜像」，放音频时是左右声道对调，放视频时是画面左右翻过来（声音跟着反）",
+      "播放设置：从前点开会弹在唱片页底下（看得见点不着），现在显示在它上面了",
+      "书架卡片：标签太多时会挤出卡片，现在装不下就在卡片里来回滚；列表排列不变",
+      "安卓：通知栏和锁屏上那条播放控制真做出来了，设置里那颗开关这回真管用",
+      "软件锁：可以在设置里打开，下次开软件要先解锁。电脑端用密码，手机端密码和九宫格二选一",
+    ] },
   { v: "0.1.3", date: "2026-09-15", title: "悬浮小窗与按钮归位",
     items: [
       "悬浮小窗：视频右下角、全屏键左边多了一颗，画面缩进一个小窗浮在屏幕上，能拖、拖边缘能改大小",
@@ -7611,6 +8395,9 @@ $("navAbout").addEventListener("keydown", e => {
    Esc 和安卓的返回键共用这一份 —— 两处各写一条链迟早会分叉，
    手机上按返回键收不掉的东西，用户会以为软件卡住了。 */
 function closeTopLayer(){
+  // 软件锁**不在这条链子上**：它拦在最外面，Esc 和返回键都收不掉它 ——
+  // 能一按就掀掉的话它就不叫锁了。设置锁的那个弹窗是普通弹窗，照常收。
+  if (!$("lockModal").hidden){ closeLockSet(); return true; }
   if (!$("aboutModal").hidden){ closeAbout(); return true; }
   if (!$("confirmModal").hidden){ closeConfirm(); return true; }
   if (!$("dupModal").hidden){ closeDup("cancel"); return true; }   // 关掉 = 取消导入，最保守的那个
@@ -7640,6 +8427,8 @@ addEventListener("keydown", e => {
     if (closeTopLayer()) return;
   }
   // 有弹窗或面板开着的时候，其余快捷键一律让路
+  // （锁屏也算：锁着的时候空格不该还能控制播放）
+  if (lockUp() || !$("lockModal").hidden) return;
   if (!$("nameModal").hidden || !$("setModal").hidden || !$("pickModal").hidden
       || !$("confirmModal").hidden || !$("dupModal").hidden || !$("noticeModal").hidden
       || !$("editModal").hidden || !$("infoModal").hidden || !$("randModal").hidden
@@ -7693,6 +8482,12 @@ let CapInfo = (onNative && CAP.Plugins) ? (CAP.Plugins.AppInfo || null) : null;
 // Pip 也是自己写的那颗（mobile/android/.../PipPlugin.java）。
 // 网页端 / 电脑端没有它，那边走浏览器自己的 Picture-in-Picture，不需要原生配合。
 let CapPip = (onNative && CAP.Plugins) ? (CAP.Plugins.Pip || null) : null;
+// Media 也是自己写的那颗（mobile/android/.../MediaPlugin.java + MediaService.java）。
+// 通知栏那条播放控制。**只有安卓有** —— 网页端和桌面壳走第 9 节那套 navigator.mediaSession，
+// 那边是真的能用（浏览器自己接的线），安卓的 WebView 里则一行都不生效。
+// ⚠️ 这个 let 必须留在这儿而不是第 9 节：CAP / onNative 是 16.5 才有的，
+//    在第 9 节求值会撞上 TDZ。第 9 节那几个函数都是运行时才碰它，来得及。
+let CapMedia = (onNative && CAP.Plugins) ? (CAP.Plugins.Media || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
@@ -7754,6 +8549,17 @@ if (CapPip){
   });
 }
 
+/* 安卓那半的通知栏播放控制（第 9b 节那条路）。
+   只挂一个监听：通知栏的按钮、耳机线控、锁屏，原生那边全都收口成一条 "action" 事件。
+   处理函数在 9b 里 —— 那边只把动作转给页面现成的 next()/prev()/play()，
+   不另起一套，所以换下一首该记的播放次数、该落盘的位置一样都不少。 */
+if (CapMedia){
+  try {
+    const h = CapMedia.addListener("action", d => nativeAction(d));
+    if (h && h.catch) h.catch(() => {});
+  } catch (e){}
+}
+
 function askExit(){
   askConfirm("退出听雨", "要退出听雨吗？听到哪儿都记着，下次打开接着放。", "退出", () => {
     exitAsked = false;
@@ -7765,6 +8571,9 @@ function askExit(){
 }
 
 function handleBack(){
+  // 锁着的时候返回键什么都不做。往下走会一层层收浮层、最后问到"要退出听雨吗"——
+  // 从一块锁屏上问这个，既莫名其妙，也等于把"这软件里有点东西"告诉了拿手机的人。
+  if (lockUp()) return;
   // 退出确认开着：这一下就当点了「退出」
   if (exitAsked && !$("confirmModal").hidden){ exitAsked = false; exitApp(); return; }
   // 1. 先一层一层收浮层（跟 Esc 同一条链）
@@ -7885,6 +8694,11 @@ function toast(msg, act){
 /* ============================================================
    15. 启动
    ============================================================ */
+/* 软件锁要赶在所有渲染之前判。lockLoad() 读的是 localStorage —— 同步的，
+   而资料库是 restoreLibrary() 异步读回来的。要是等它回来再决定，中间那几帧
+   真资料库已经画在屏幕上了，锁等于白设。 */
+lockLoad();
+if (lock.on) showLock();
 paintVolume();
 // 待播在这儿就建，别等 restoreLibrary —— 它要一条条去 files 存储里取本体，
 // 库里存的文件一多就是几百次读，等它跑完再建的话侧栏会空着一两秒才冒出「待播」。
@@ -7895,11 +8709,16 @@ ensureQueue();
 // 个人主页那个 id 同理：侧栏顶上那块要画它，等 restoreLibrary 回来再生成的话
 // 会先闪一下没名字的「听雨」。先抢先生成一个，存档里有就把它换掉（见 restoreLibrary）。
 ensureProfile();
-initMediaSession();
+// ⚠️ 这儿是 applyMediaSession 不是 initMediaSession。
+// 原来那句有两处漏：① 它无条件挂动作处理，用户明明把「通知栏播放控制」关掉了，
+// 锁屏上照样会冒出一条（关了等于没关）；② 开着的用户这边又从来没被算过一遍，
+// 于是"开着"这个状态要等到第一次换曲目才生效。一个收口函数两个方向都管。
+applyMediaSession();
 syncLayoutUI();
 syncResumeUI();
 syncImportUI();
 syncNotifUI();
+syncLockUI();
 renderAll();
 drawWave();
 paintRules();

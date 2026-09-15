@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         // 建完再加的插件，页面上根本看不到。
         registerPlugin(AppInfoPlugin.class);
         registerPlugin(PipPlugin.class);
+        registerPlugin(MediaPlugin.class);
         super.onCreate(savedInstanceState);
     }
 
