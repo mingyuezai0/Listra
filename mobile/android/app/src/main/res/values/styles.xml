@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -20,8 +20,18 @@
          - statusBarColor / navigationBarColor：API 35 以下没有强制 edge-to-edge，
            这两条栏是实心的，默认吃的是主题的 colorPrimaryDark（库里的值是靛蓝
            #303F9F）—— 一条蓝紫色的顶栏，跟软件半点不像。这里改成软件的纸色。
-         - windowLightStatusBar：深色图标。默认 false = 浅色图标，白底上看不见。 -->
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+         - windowLightStatusBar：深色图标。默认 false = 浅色图标，白底上看不见。
+
+         ⚠️ parent 不能用 DayNight（第 16 项）。DayNight 会跟着系统深浅走，
+            系统开了深色，「播放设置 → 到点」那颗时钟点开的面板就是一块黑的 ——
+            而软件本身是固定的白底薄荷，跟不了系统的深浅。钉成 Light。
+         ⚠️ colorAccent / colorPrimary / colorControlActivated 三条也不能省：
+            网页里那颗 <input type="time"> 点开的是**系统**的时钟面板，它认的是
+            主题的强调色。不写就落回 Capacitor 库那份（colorPrimary 靛蓝 #3F51B5、
+            colorAccent 品红 #FF4081），弹出来一片蓝紫粉。这里换成薄荷主色。
+            窗底 windowBackground 已经是软件那张纸色，面板的白底由 Light 那份
+            alertDialogTheme 兜着。 -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
@@ -29,6 +39,13 @@
         <item name="android:statusBarColor">#FFF6FAF8</item>
         <item name="android:navigationBarColor">#FFF6FAF8</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+        <item name="colorPrimary">#FF16C79A</item>
+        <item name="colorPrimaryDark">#FF0FA47F</item>
+        <item name="colorAccent">#FF16C79A</item>
+        <item name="colorControlActivated">#FF16C79A</item>
+        <item name="android:colorAccent" tools:targetApi="lollipop">#FF16C79A</item>
+        <item name="android:colorControlActivated" tools:targetApi="lollipop">#FF16C79A</item>
     </style>
 
 

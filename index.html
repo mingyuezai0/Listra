@@ -54,7 +54,11 @@
   --sal:var(--safe-area-inset-left,env(safe-area-inset-left,0px));
 }
 
-*{box-sizing:border-box}
+*{box-sizing:border-box;
+  /* 手机点任何一颗按钮，系统会在这块区域上闪一下半透明的蓝框。这套配色里
+     它脏得扎眼（第 19 项）。这条是继承属性，挂在这里等于全站一次性关掉；
+     :focus-visible 那条薄荷色描边不受影响 —— 那是键盘用的，跟触摸无关。 */
+  -webkit-tap-highlight-color:transparent}
 /* hidden 属性靠 UA 样式表生效，优先级比任何类选择器都低 ——
    .grid{display:grid} 这种规则会把它盖掉。这里显式堵住。 */
 [hidden]{display:none !important}
@@ -71,26 +75,18 @@ input{font:inherit;color:inherit}
 ::selection{background:var(--mint-200);color:var(--ink)}
 
 /* --- 滚动条一律不画 ---
-   应用自己这些可滚的区域全部藏掉滚动条：内容照样滚，滚轮、触摸、方向键、
-   拖到边缘自动滚都不受影响，只是不再有一条灰杠子杵在那儿。
-   桌面端那条最显眼（#stage 贴着窗口右缘一整条），跟这套"像测量仪器"的界面
-   最不搭；手机浏览器的滚动条本来就是浮层、不滚不显示，所以这一条主要是电脑上看得出来。
+   内容照样滚，滚轮、触摸、方向键、拖到边缘自动滚都不受影响，
+   只是不再有一条灰杠子杵在那儿。桌面端那条最显眼（#stage 贴着窗口右缘一整条），
+   跟这套"像测量仪器"的界面最不搭；手机浏览器的滚动条本来就是浮层、
+   不滚不显示，所以这一条主要是电脑上看得出来。
    两根老写法 + 一根标准写法：桌面壳和 Chrome/Edge 认 ::-webkit-scrollbar，
    Firefox 认 scrollbar-width。
-   ⚠️ 歌词编辑那个 textarea 故意不在名单里 —— 输入框里没有滚动条，
-   写长歌词时会不知道下面还有没有字。 */
-.stage, .sidebar, .about-scroll, .lyric-body, .dup-list, .pick-list,
-#plPanel, #rulePanel, #markPanel, #addMenu, #filterMenu, #searchDrop{
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-}
-/* ⚠️ .set-scroll 不在这份名单里 —— 设置里那一长条是**真内容**不是浮层，
-   藏掉滚动条的话用户看不出下面还有「文件位置」。 */
-.stage::-webkit-scrollbar, .sidebar::-webkit-scrollbar, .about-scroll::-webkit-scrollbar,
-.lyric-body::-webkit-scrollbar, .dup-list::-webkit-scrollbar, .pick-list::-webkit-scrollbar,
-#plPanel::-webkit-scrollbar, #rulePanel::-webkit-scrollbar, #markPanel::-webkit-scrollbar,
-#addMenu::-webkit-scrollbar, #filterMenu::-webkit-scrollbar,
-#searchDrop::-webkit-scrollbar{width:0;height:0}
+   ⚠️ 第 14 项起改成**全站**（原来是逐个数出来的名单，漏一个就露一根），
+   只有 textarea 除外 —— 输入框里没有滚动条，写长歌词时会不知道下面还有没有字。
+   用 :not(textarea) 而不是"给 textarea 再写一条覆盖回去"：::-webkit-scrollbar
+   上写 width:auto 各家内核还原得不一致，干脆一开始就不套上。 */
+*:not(textarea){scrollbar-width:none; -ms-overflow-style:none}
+*:not(textarea)::-webkit-scrollbar{width:0;height:0}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .micro{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 :focus-visible{outline:2px solid var(--mint-600); outline-offset:2px; border-radius:4px}
@@ -800,8 +796,16 @@ body.pip-on .fs-ui{display:none}
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
   box-shadow:var(--sh-pop);padding:6px;
 }
-/* 排序。比 ⋯ 菜单宽一点，要放得下「按作者首字母」六个字。 */
-#sortMenu,#queueMenu,#addFileMenu{
+/* 排序。比 ⋯ 菜单宽一点，要放得下「按作者首字母」六个字。
+   ⚠️ 它的 z-index 必须**高于 #plPanel(170)**：这颗按钮就住在播放列表面板
+   顶上，菜单弹出来必然压在面板身上。原来跟另外两个菜单一起是 150，
+   于是整块菜单被面板盖住，点「排序」看着就是"没反应"（第 11 项）。 */
+#sortMenu{
+  position:fixed;z-index:180;width:204px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:var(--sh-pop);padding:6px;
+}
+#queueMenu,#addFileMenu{
   position:fixed;z-index:150;width:204px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
   box-shadow:var(--sh-pop);padding:6px;
@@ -872,6 +876,18 @@ body.pip-on .fs-ui{display:none}
      那样子指在行上就没法滑着滚这个面板了；触摸走的是长按 200ms 起拖。 */
   cursor:grab;
 }
+/* 能被拖的四种行（播放列表面板的行、待播的行、书架卡片、列表行）。
+   触摸长按起拖这件事，浏览器默认会来抢：长按选中文字、长按封面弹出
+   "存储图片"、或者干脆判成"这是在滚列表"然后发一个 pointercancel 把手势
+   收走 —— 拖拽当场弹回原位，用户看到的就是"按住没反应／一拖就卡回去"（第 10 项）。
+   这三条都是"把手势让给我们"的静态声明，先摆上。
+   ⚠️ touch-action 仍然不写：写了在行上就没法滑动滚列表了，而列表几乎全是行。
+   真正拦住滚动的是 JS 里那条非 passive 的 touchmove —— 见 armDragTouchGuard。 */
+.pl-row, .q-row, .card, .mrow{
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+}
+/* 封面图被长按会走浏览器的"拖图片"，那条路一样会把 pointercancel 招来 */
+.pl-row img, .q-row img, .card img, .mrow img{ -webkit-user-drag:none; user-drag:none }
 .pl-row:hover{background:var(--surface-2)}
 .pl-row.is-current{background:var(--mint-100)}
 .pl-row.is-current .pl-name{color:var(--mint-700)}
@@ -932,10 +948,22 @@ body.pip-on .fs-ui{display:none}
 /* 紧凑档：同一个 .seg 在设置弹窗里是 36px 高，这里要装得下五组 */
 .seg.tight{padding:3px;gap:4px;flex-wrap:wrap}
 .seg.tight .seg-btn{height:26px;font-size:12px;flex:1 1 auto;min-width:44px;padding:0 7px}
-.pnl-time{flex:1 1 auto;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line);
-  border-radius:6px;background:var(--paper);outline:none;
+/* 「到点」那颗时钟（第 16 项）。
+   内核自带的指示器是颗深灰小钟，颜色由系统配色说了算，和这套白+薄荷对不上；
+   手机上点开的那块面板也跟着系统的深浅走。三条一起改：
+   ① color-scheme:light —— 弹出来的日期/时间面板按浅色画（白底）；
+   ② 把自带那颗钟按掉（保留它那块点击区，点上去照样弹面板），
+      自己用一条内联 SVG 画一颗薄荷细线钟，跟全站的等宽读数是一路的；
+   ③ 右边留出它的位置，别压在数字上。 */
+.pnl-time{flex:1 1 auto;min-width:0;height:28px;padding:0 26px 0 8px;
+  border:1px solid var(--line);border-radius:6px;outline:none;color:var(--ink);
+  background:var(--paper) no-repeat right 7px center/14px 14px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230FA47F' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.2V12l3.2 2.1'/%3E%3C/svg%3E");
+  color-scheme:light;
   font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
-.pnl-time:focus{border-color:var(--mint-500);background:var(--surface)}
+.pnl-time:focus{border-color:var(--mint-500);background-color:var(--surface)}
+.pnl-time::-webkit-calendar-picker-indicator{opacity:0;cursor:pointer}
+.pnl-time::-webkit-datetime-edit-fields-wrapper{color:var(--ink)}
 .pnl-note{margin:-1px 0 8px;padding-left:40px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
 .pnl-sec{display:flex;align-items:center;gap:8px;padding:11px 2px 6px;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
@@ -984,8 +1012,15 @@ body.pip-on .fs-ui{display:none}
 .am-sep{height:1px;background:var(--line-2);margin:5px 8px}
 /* 菜单底下那行小字说明。不占高度地补一句"再点一次会怎样"这类话。 */
 .am-note{margin:2px 10px 6px;font-size:11.5px;line-height:1.5;color:var(--ink-3)}
-.am-new{color:var(--mint-700);font-weight:550}
-.am-new:hover{background:var(--mint-100)}
+/* 分节标题 + 右边那颗「收起 / 展开」。标题那条 am-sec 的上下内边距挪到
+   外层来，两行才对齐得上。 */
+.am-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:7px 10px 4px}
+.am-head .am-sec{padding:0}
+.am-fold{flex:0 0 auto;height:20px;padding:0 6px;border-radius:var(--r-sm);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-3);
+  transition:background .12s,color .12s}
+.am-fold:hover{background:var(--mint-100);color:var(--mint-700)}
 .am-del{color:var(--ink-2)}
 .am-del:hover{background:#FFEDE9;color:var(--coral)}
 
@@ -1001,7 +1036,6 @@ body.pip-on .fs-ui{display:none}
 .fbtn > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .fbtn:hover{background:var(--mint-100);border-color:var(--mint-200);color:var(--mint-700)}
 .fbtn.on{background:var(--mint-100);border-color:var(--mint-300);color:var(--mint-700);font-weight:600}
-.fbtn.fclear{color:var(--ink-3);padding:0 9px}
 /* 收起箭头。选中时朝上，一眼看出这颗按钮现在是展开的 */
 .fbtn .fc{flex:0 0 auto;transition:transform .18s;opacity:.6}
 .fbtn.on .fc{transform:rotate(180deg)}
@@ -1071,6 +1105,22 @@ body.pip-on .fs-ui{display:none}
    编辑详情 / 详情
    ============================================================ */
 .ed-field{display:block;margin-bottom:12px}
+/* 标签那一格要当"已有标签"下拉的定位参照 */
+.ed-field.pos{position:relative}
+/* 已有标签下拉。挂在 .chips 下面（不是 .ed-field 底下 —— 那要把 ed-label
+   那行也算进去），所以 left/right 对齐的是输入框那一圈的宽度。 */
+.tagdrop{position:absolute;left:0;right:0;margin-top:4px;z-index:6;
+  max-height:min(38vh,196px);overflow-y:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+  box-shadow:var(--sh-pop);padding:4px}
+.tagdrop-item{display:flex;align-items:center;gap:8px;width:100%;height:30px;padding:0 8px;
+  border-radius:var(--r-sm);font-size:12.5px;color:var(--ink-2);text-align:left;
+  transition:background .12s,color .12s}
+.tagdrop-item:hover{background:var(--mint-100);color:var(--mint-700)}
+.tagdrop-item .td-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
+.tagdrop-item .td-n{flex:0 0 auto;font-family:var(--mono);font-size:10px;
+  color:var(--ink-3);font-variant-numeric:tabular-nums}
+.tagdrop-none{padding:9px 8px;font-size:12px;color:var(--ink-3)}
 .ed-label{display:block;margin-bottom:5px;font-family:var(--mono);font-size:9.5px;
   letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 /* 标签胶囊。用户要的是"一个个加、一个个删"，不是一整个逗号分隔的文本框。
@@ -1121,7 +1171,13 @@ body.pip-on .fs-ui{display:none}
    命名弹窗
    ============================================================ */
 .modal{position:fixed;inset:0;z-index:220;background:rgba(12,26,21,.28);
-  backdrop-filter:blur(3px);display:grid;place-items:center;padding:20px}
+  backdrop-filter:blur(3px);display:grid;place-items:center;padding:20px;
+  /* ⚠️ 这条 minmax(0,1fr) 不能省：默认的 auto 轨道会按内容的 max-content 长。
+     .modal-box 是 width:min(460px,100%)，而"百分比在内在尺寸阶段不可解"，
+     于是轨道被一个 nowrap 的长文件名撑到 726px，盒子取 min 得死宽 460 ——
+     在 320/390 宽的手机上右半边就整块顶出屏幕（列表还不会横向滚）。
+     钉成 minmax(0,1fr) 后轨道 = 可用宽，盒子里的 100% 才有意义。 */
+  grid-template-columns:minmax(0,1fr)}
 .modal-box{background:var(--surface);border-radius:var(--r-lg);padding:20px;
   width:min(360px,100%);box-shadow:var(--sh-pop)}
 .modal-box h3{margin:0 0 14px;font-size:15px;font-weight:650}
@@ -1514,13 +1570,28 @@ body.vinyl-wide #lyricBackBtn{display:none}
   /* 26px 的开关手指够不着，触摸屏上放大一圈 */
   .deck-head{padding:12px 14px 0;gap:8px}
   .deck-tool{width:30px;height:30px}
-  .deck-row{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;padding:0 12px 8px}
+  /* 右边那列回到桌面那条 minmax(min-content,1fr)：时间要占多宽就占多宽，
+     剩下的才归标题。写成 1fr 的话两边对半分，那块表反而没地方站。 */
+  .deck-row{grid-template-columns:minmax(0,1fr) auto minmax(min-content,1fr);gap:10px;padding:0 12px 8px}
   .deck-art{display:none}
+  /* 手机上也要看得见播放时间（第 5 项）。「规则读数」那枚仍然藏起来 ——
+     它只在有规则在跑的时候才有字，平时是个空盒子，窄屏那一列全是位置。
+     ⚠️ 只留已播的那半：实测这个槽位 320/360/390 宽下是 36/56/71px，
+     而「03:45 / 04:12」要 84px（时长过小时还要 110px）—— 全塞进去就得
+     把标题挤到 28px。总时长在列表行的副标题、播放轴的提示气泡里都有。
+     桌面那条 min-width:19ch 是给帧进帧退让位的，窄屏帧按钮搬去了
+     传输键那一排，这里不必再留。 */
   .deck-time{display:none}
+  #deckTime{display:block;min-width:0;font-size:11px}
+  #deckTime .dt-total{display:none}
   .deck-tail{gap:10px}
   .deck-transport{gap:4px}
   .tbtn{width:36px;height:36px}
   .tbtn.play{width:44px;height:44px}
+  /* 手机端上/下一个要更好按（第 18 项）：36 → 42，图标跟着 18 → 21。
+     不再往 44 走 —— 那是中间那颗播放键的尺寸，三颗一样大就分不出主次了。 */
+  #btnPrev,#btnNext{width:42px;height:42px}
+  .deck-transport #btnPrev svg,.deck-transport #btnNext svg{width:21px;height:21px}
   /* 窄屏传输键有六颗，帧退帧进再占 34px 会把标题那列挤没 */
   .btn-frame{width:30px;height:30px}
   .deck-frames{padding-left:5px;margin-left:0}
@@ -1999,7 +2070,12 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <div class="deck-tail">
         <!-- 规则读数：定时还剩多久、定量还剩几首。窄屏藏起来，那儿只留按钮上的点 -->
         <span class="deck-time rule-read" id="ruleBadge" hidden></span>
-        <div class="deck-time" id="deckTime"><b>00:00</b> / 00:00</div>
+        <!-- ⚠️ 「/ 总长」这半截的 .dt-total 一开始就得包上 —— 窄屏是靠它藏掉
+             右半截的（见窄屏块里 #deckTime 那条注释），而 onTime() 只在真的
+             播起来之后才重写这段 HTML。开局这一份不带，手机上一进软件
+             「00:00 / 00:00」就顶在那儿，播放台那一行在 320 上直接被撑出去
+             46px（布局套件 W320F3 逮住的）。 -->
+        <div class="deck-time" id="deckTime"><b>00:00</b><span class="dt-total"> / 00:00</span></div>
 
         <!-- 音量：平时只有一个喇叭 -->
         <div class="vol" id="vol">
@@ -2117,11 +2193,18 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <input id="edName" type="text" maxlength="120" autocomplete="off" placeholder="留空就用文件名"></label>
     <label class="ed-field"><span class="ed-label">作者</span>
       <input id="edArtist" type="text" maxlength="80" autocomplete="off" placeholder="比如歌手、播客、UP 主"></label>
-    <div class="ed-field"><span class="ed-label" id="edLabelsLab">标签</span>
+    <div class="ed-field pos"><span class="ed-label" id="edLabelsLab">标签</span>
       <div class="chips" id="edChips" role="group" aria-labelledby="edLabelsLab">
         <input id="edLabelIn" type="text" maxlength="40" autocomplete="off"
-               placeholder="打字，回车加一个" aria-label="添加标签">
-      </div></div>
+               placeholder="打字，回车加一个" aria-label="添加标签" aria-autocomplete="list"
+               aria-controls="edTagDrop" aria-expanded="false">
+      </div>
+      <!-- 用过的标签都在这儿摆着，点一下就是加一个（第 9 项）。
+           手打的同一个标签很容易差一个字（全角空格、繁体、"摇磙"），
+           挑现成的就不会分家。放在 .chips 外面：它是绝对定位的浮层，
+           搁进去会被 flex 当成一个胶囊排。 -->
+      <div class="tagdrop" id="edTagDrop" role="listbox" aria-label="已有标签" hidden></div>
+    </div>
     <p class="modal-note">这些只写在软件里，磁盘上的文件一个字节都不动。</p>
     <div class="modal-actions">
       <button class="btn" id="edCancel">取消</button>
@@ -2667,9 +2750,12 @@ const store = {
   // 收藏夹也能当播放列表用，所以不能只记 activeQueueId。
   playlist: null,
   /* 个人主页那点东西：显示用的 id、头像用的是第几号小图案（都是自动生成、能自己改），
-     外加一个 never 归零的「历史导入文件数」。
-     ⚠️ 这个数**不是** store.items.length —— 那个是"现在库里有多少"，删一个就少一个。
-        这里说的是"一共进过多少"，删掉的也算数，所以只能自己攒。
+     外加一个「历史导入文件数」。
+     ⚠️ 第 8 项起它**跟着删**（reallyRemoveItems 里那一句）。原来是只涨不跌的，
+        删掉的文件一直记着，于是"历史导入 30"跟旁边"当前 12"并排摆着像个错数。
+        现在它约等于"库里这些当初真是导入进来的有多少"，和 store.items.length
+        通常一样 —— 但不一样的那部分是真的：重连回离线的、从目录扫回来的
+        都在 items 里而从来没被算成"导入过"。
      口径：只有真的新进库的才算（addFiles 里那个 list）。去重跳过的、格式不认识的、
      重连回离线的、覆盖已有的，都不算「新导入」—— 它们没往库里添新东西。 */
   profile: { name: "", avatar: 0, imported: 0 },
@@ -2687,6 +2773,14 @@ const store = {
     // 侧栏两个大项收起/展开。默认都收起 —— 夹子多了侧栏会顶满，
     // 而资料库和设置就在同一列里，被挤下去就点不到了。
     navOpen: { coll:false, queue:false },
+    /* 「更多操作」浮层里「收藏夹 / 待播」两节的收起状态。
+       null = 还没手动点过，按条目数自动定（见 addSecFolded）。 */
+    addOpen: { coll:null, queue:null },
+    /* 最后摆上播放台的是哪一条（第 20 项）。重开软件时把它原样摆回去、
+       停在它上次的位置上。存 id 不存下标 —— 资料库的次序会变（加文件、
+       排序、筛选），下标第二天就指到别人身上了。
+       指向的那条被删了就什么也不摆（见 restoreLastPlayed）。 */
+    lastId: "",
   },
 };
 const findColl  = id => store.collections.find(c => c.id === id);
@@ -2696,15 +2790,22 @@ const activeQueue = () => findQueue(store.activeQueueId) || store.queues[0] || n
 // 的人，行为跟从前一模一样。
 function playlistRef(){
   const p = store.playlist;
+  // 资料库（音频/视频那一页）自己也是一条合法的"当前播放列表"，它没有 id。
+  // 见 libOrder() 上头那段：不认它的话，从资料库点开的歌全都落在默认待播外面。
+  if (p && (p.kind === "audio" || p.kind === "video")) return p;
   if (p && p.id && (p.kind === "coll" ? findColl(p.id) : findQueue(p.id))) return p;
   const q = activeQueue();
   return q ? { kind:"queue", id:q.id } : null;
 }
+// 资料库的播放顺序 = 文件存进来的次序（也就是资料库那一页画出来的次序）。
+// 它没有自己的 sortKey —— 资料库的筛选是"看法"，不是"次序"，不参与播放顺序。
+const libOrder = kind => store.items.filter(m => m.kind === kind);
 const isCurrentList = (kind, id) => { const p = playlistRef(); return !!p && p.kind === kind && p.id === id; };
 // 上一首/下一首/接着播，走的是当前播放列表的顺序
 function playOrder(){
   const p = playlistRef();
   if (!p) return null;
+  if (p.kind === "audio" || p.kind === "video") return libOrder(p.kind);
   const box = p.kind === "coll" ? findColl(p.id) : findQueue(p.id);
   return box ? orderedItems(box) : null;
 }
@@ -3323,6 +3424,14 @@ async function restoreLibrary(){
     if (st.navOpen && typeof st.navOpen === "object"){
       store.settings.navOpen = { coll:!!st.navOpen.coll, queue:!!st.navOpen.queue };
     }
+    // 这个键的三态（true 收起 / false 展开 / null 没调过）得原样留着 ——
+    // 用 !! 一压，老存档升上来的"没调过"就变成了"展开"，长夹子一概不折。
+    if (st.addOpen && typeof st.addOpen === "object"){
+      const tri = v => (v === true ? true : v === false ? false : null);
+      store.settings.addOpen = { coll:tri(st.addOpen.coll), queue:tri(st.addOpen.queue) };
+    }
+    // 上次摆在播放台上的那一条（第 20 项）。老存档里没有这个键，空串 = 不摆。
+    if (typeof st.lastId === "string") store.settings.lastId = st.lastId;
   }
 
   const cols = await DB.get("meta", "collections");
@@ -3352,7 +3461,9 @@ async function restoreLibrary(){
   if (hist && typeof hist === "object") store.history = hist;
   store.activeQueueId = (await DB.get("meta", "activeQueue")) || store.queues[0]?.id || null;
   const pl = await DB.get("meta", "playlist");
-  if (pl && pl.id && (pl.kind === "coll" || pl.kind === "queue")) store.playlist = pl;
+  // "资料库"那两种没有 id，单独放行（老存档里不会有，是新加的形态）
+  if (pl && (pl.kind === "audio" || pl.kind === "video")) store.playlist = { kind: pl.kind };
+  else if (pl && pl.id && (pl.kind === "coll" || pl.kind === "queue")) store.playlist = pl;
   ensureQueue();
 
   // 正常情况下 q_auto 已经认领好了，这一趟扫不出东西（见 sweepAutoQueues）
@@ -3773,10 +3884,11 @@ function filterRowHTML(){
       aria-label="${idle}筛选${cur ? "：" + esc(cur) : ""}"
       title="${cur ? `${idle}：${esc(cur)}` : `按${idle}筛选`}"
       ><span>${esc(cur || idle)}</span>${CARET}</button>`;
+  // 「清除」那颗（第 17 项）已经不在这儿了。两个筛子各自点开都能选回「全部」，
+  // 而且选中之后按钮上写的就是当前的值，再点一次就是清掉。
   return `<div class="view-filters">
       ${btn("artist", filterArtist, "作者")}
       ${btn("label",  filterLabel,  "标签")}
-      ${(filterArtist || filterLabel) ? `<button class="fbtn fclear" data-f="clear" title="清掉这两个筛子">清除</button>` : ""}
     </div>`;
 }
 
@@ -4069,6 +4181,15 @@ const routeStack = [];
 let routeBack = false;          // 这一趟是返回键触发的，不再往栈里压
 const ROUTE_MAX = 40;
 
+/* 哪几页算"子页"—— 只有站在子页上按返回键才往回退一层（第 15 项）。
+   侧栏上那几项（个人主页 / 资料库的音频·视频 / 收藏夹 / 待播）是**同一层**的
+   平级页，从一页点到另一页不是"进去一层"。原来按点击顺序一路往回退，
+   于是"资料库 → 收藏夹 → 待播"这样逛一圈，按返回键就倒着走回收藏夹、再回资料库 ——
+   可这三页本来就是最底层，退回哪儿都不比现在这个更有道理，该问的是"要不要退出"。
+   全app 里真有上下层关系的只有榜单（从个人主页里点进去的那一页）。
+   ⚠️ 栈还是照压不误（navTo 里那一句不动）—— 榜单要靠它记住"从哪儿进来的"。 */
+const SUB_ROUTES = new Set(["board"]);
+
 /* 离开视频页之前的三件事：把当前这一帧留下来当封面、停住、收掉帧预览。
    返回键和 navTo 都要用 —— 返回键从视频页回列表时不改 route，走不了 navTo。 */
 function stopVideoForLeave(){
@@ -4144,7 +4265,7 @@ const elFor = m => m.kind === "video" ? videoEl : audioEl;
 
 // auto = "这是上一首放完自己接上来的"，不是人点的。
 // 循环次数和定量都只在人点进来的时候从头数（见下面那句 if (!auto)）。
-function load(m, { autoplay = true, auto = false } = {}){
+function load(m, { autoplay = true, auto = false, restore = false } = {}){
   if (!m) return;
   if (!m.file){
     // 「只建索引」进来的，重开之后本来就没有本体 —— 这不是出错，得给条能走的路
@@ -4170,6 +4291,8 @@ function load(m, { autoplay = true, auto = false } = {}){
 
   if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
   objectUrl = URL.createObjectURL(m.file);
+  // 要在 el.src 之前摆好 —— loadedmetadata 一到 applyResume 就会把它取走。
+  if (restore) resumeQuiet = true;
   el.src = objectUrl;
   el.volume = volume;
   el.muted  = muted;
@@ -4178,9 +4301,14 @@ function load(m, { autoplay = true, auto = false } = {}){
   if (!auto){ rules.loopDone = 0; rules.quotaDone = 0; clipAt = -1; clipA = clipB = null; }
 
   player.current = m;
+  // 记下"最后摆上播放台的是哪一条"（第 20 项）。settings 整份跟着 saveLibrary 走，
+  // 不为它单开一个键。换了才写，同一条重复 load（暂停续播那种）不白写一次。
+  if (store.settings.lastId !== m.id){ store.settings.lastId = m.id; saveLibrary(); }
   setTitle($("deckTitle"), titleOf(m));
   renderDeckSub(m); renderArt(m);
-  m.kind === "video" ? showStage() : showList();
+  // restore 那趟（开机把上次那条摆回来）不换页：视频不推到舞台上 ——
+  // 开软件该落在资料库，侧栏高亮着"资料库"而中间是部片子，是两套说法。
+  if (!restore) m.kind === "video" ? showStage() : showList();
   // 逐帧和全屏同一条规矩：音频没有"帧"这回事，空载更谈不上。
   // 全屏那颗还多一条"别在全屏里露脸"，所以走自己的函数。
   syncCornerBtns();
@@ -4192,8 +4320,10 @@ function load(m, { autoplay = true, auto = false } = {}){
 
   // 唱片页：**换一首音频才开**。同一条暂停之后又点开播放，不该再弹回来
   // （用户手动关掉过一次的，更不该跟他较劲）。
+  // restore 那趟也不开 —— 开软件迎面盖一张大唱片，就看不见资料库了；
+  // 用户要的只是"播放台上摆着上次那条"（第 20 项）。
   if (m.kind === "audio"){
-    if (m.id !== lastAudioId) openVinyl(m);
+    if (!restore && m.id !== lastAudioId) openVinyl(m);
   } else {
     closeVinyl();
   }
@@ -4293,6 +4423,14 @@ function advance(){
   clearPos(player.current);   // 这一条放完了，下次从头开始，别又跳回结尾
   flushStats();               // ended 不发 pause，累计时长得在这儿收一笔
 
+  // 「播完暂停」：到这儿就停住，下面的定量/循环/下一首一概不走。
+  // 单曲循环放行 —— 它重放的是**同一首**，不是"下一个文件"，把它一并掐掉
+  // 等于让这两个设置互相打架，而用户两个都明确设过。
+  if (!rules.autoNext && rules.loop !== "one"){
+    stopWith("播完暂停：停在这里，等你自己按播放");
+    return;
+  }
+
   // 临时待播：整列都放过了就把这一列收走，停在这儿。放在最前面 ——
   // 这一列都没了，后面"下一首是谁"、"循环到第几遍"全都没了意义。
   if (retireTempIfDone()) return;
@@ -4347,20 +4485,38 @@ function stopWith(msg){
 }
 
 // 片段循环：走到 B 就跳到下一段的 A，最后一段接回第一段。
-// 人把进度拖到片段外头去了就不硬拽回来 —— 那时 clipAt 归 -1，
-// 等自然播到某一段的 A 再重新扣上。
+// **没勾选的地方一律不放**（第 12 项）—— 播放头落在片段外头就把它拎进最近的一段。
 let clipAt = -1;
 const clipList = m => ((m && m.clips) || []).filter(c => c.on && c.b > c.a + 0.2).sort((a,b) => a.a - b.a);
 function clipTick(){
   const list = clipList(player.current);
   if (!list.length){ clipAt = -1; return; }
   const t = activeEl.currentTime;
+  // 播到当前这一段的尾巴了 → 接下一段（最后一段接回第一段）
   if (clipAt >= 0 && clipAt < list.length && t >= list[clipAt].b - 0.06){
     clipAt = (clipAt + 1) % list.length;
     activeEl.currentTime = list[clipAt].a;
     return;
   }
-  clipAt = list.findIndex(c => t >= c.a - 0.35 && t < c.b);
+  const i = list.findIndex(c => t >= c.a - 0.35 && t < c.b);
+  if (i >= 0){ clipAt = i; return; }
+  /* 播放头不在任何一段里 —— 第 12 项就是从这儿漏出去的。
+     上面那条"播到尾部就接下一段"的闸要 clipAt >= 0 才放行，而这一行刚把
+     clipAt 归成 -1，于是**两个片段中间那段空隙**一路放到底，直到自然播到
+     下一段的 a - 0.35 才重新扣上（开头没勾的那一截、拖过去的、seek 落进去的
+     全是同一条路）。现在直接把它拎进最近的一段：还没到第一段就进第一段，
+     过了最后一段就从头来，夹在中间就进它后面那一段。
+     ⚠️ 只在播放中扳。暂停着拖进度条只是想看看波形，不该被弹走 ——
+        松手一按播放，第一发 timeupdate 就会把人接回来。
+     ⚠️ 正在 seek 的那些帧不扳：set currentTime 到落地之间还会来几发 timeupdate，
+        不加这道闸同一个目标会被连扳好几下。 */
+  if (activeEl.paused || activeEl.seeking) return;
+  const to = t < list[0].a ? list[0].a
+           : t >= list[list.length - 1].b ? list[0].a
+           : list[list.findIndex(c => c.a > t)].a;
+  if (Math.abs(to - t) < 0.05) return;      // 已经站在这儿了，别再设一次
+  clipAt = list.findIndex(c => c.a === to);
+  activeEl.currentTime = to;
 }
 
 /* ---- 逐帧：一帧到底有多长 ----
@@ -4496,7 +4652,8 @@ function onTime(){
   clipTick();                       // 片段循环得赶在读数之前把位置扳回来
   const d = activeEl.duration || player.current?.duration || 0;
   tickPlayed();
-  $("deckTime").innerHTML = `<b>${fmtTime(activeEl.currentTime)}</b> / ${fmtTime(d)}`;
+  // 「/ 总长」那半截包一层，窄屏用 CSS 藏掉 —— 理由见窄屏块里 #deckTime 那条注释。
+  $("deckTime").innerHTML = `<b>${fmtTime(activeEl.currentTime)}</b><span class="dt-total"> / ${fmtTime(d)}</span>`;
   drawWave(); fsPaint();
   savePos(false);                   // 自己按毫秒节流，一分钟也就写十来次
   if ("mediaSession" in navigator && notifOn() && navigator.mediaSession.setPositionState && isFinite(d) && d > 0){
@@ -4520,6 +4677,10 @@ const rules = {
   loopDone: 0,
   quota: 0,           // 0 = 关；N = 放完 N 首就停
   quotaDone: 0,
+  /* 播完一个文件之后接着放下一个（默认），还是就停在这儿等你自己按播放。
+     ⚠️ 只拦"换文件"那一步 —— 单曲循环重放的是同一首，不归它管。
+     见 advance() 开头那条闸。 */
+  autoNext: true,
   timer: null,        // { at:到期时间戳, min:15|30|60|0, label:"30 分"|"23:00" }
   /* 声道反转 / 画面镜像。**只有这一个旗子**：面板里也只占一行，
      跟着当前文件换名字（音频叫「声道反转」，视频叫「视频镜像」，
@@ -4540,6 +4701,7 @@ function setShuffle(on){ rules.shuffle = !!on; bag.ids = []; bag.sig = ""; paint
 function setLoop(v){ rules.loop = v; rules.loopDone = 0; paintRules(); }
 function setLoopLimit(n){ rules.loopLimit = +n || 0; rules.loopDone = 0; paintRules(); }
 function setQuota(n){ rules.quota = +n || 0; rules.quotaDone = 0; paintRules(); }
+function setAutoNext(on){ rules.autoNext = !!on; paintRules(); }
 
 /* ---- 声道反转 / 画面镜像 ----
    画面那一半是 CSS（.video-wrap video.mirror 一句 transform:scaleX(-1)），
@@ -4642,7 +4804,7 @@ function armClock(hhmm){
 // 按钮上的点和读数。一次只报最紧的那一件，不堆 —— 堆起来就没人看了。
 function paintRules(){
   const busy = rules.shuffle || rules.loop !== "off" || rules.quota > 0 || !!rules.timer
-            || rules.rate !== 1 || rules.flip;
+            || rules.rate !== 1 || rules.flip || !rules.autoNext;
   $("btnRules").classList.toggle("on", busy);
   let text = "";
   if (rules.timer){
@@ -4657,6 +4819,8 @@ function paintRules(){
     text = "随机";
   } else if (rules.rate !== 1){
     text = rules.rate + "×";
+  } else if (!rules.autoNext){
+    text = "播完暂停";
   } else if (rules.flip){
     // 排在最末：它是这儿唯一一个"跟当前文件是什么"有关的读数，
     // 有别的规则在管着的时候，那件更该被看见。
@@ -4683,17 +4847,16 @@ function renderRulePanel(){
   const flipRow = segHTML(vid ? "镜像" : "声道", "flip", rules.flip ? 1 : 0,
       vid ? [{ v:0, t:"原样" }, { v:1, t:"镜像" }]
           : [{ v:0, t:"原样" }, { v:1, t:"反转" }],
-      vid ? "画面左右翻过来，声音也跟着反。"
-          : "左右声道换个个儿。放视频时这一行会变成「视频镜像」。");
+      vid ? "画面左右翻过来，声音也跟着反。" : "");
   rulePanel.innerHTML =
       segHTML("速度", "rate", rules.rate, RATES.map(r => ({ v:r, t:r + "×" })))
     + flipRow
     + segHTML("顺序", "shuffle", rules.shuffle ? 1 : 0, [{ v:0, t:"顺序" }, { v:1, t:"随机" }])
     + segHTML("循环", "loop", rules.loop,
-              [{ v:"off", t:"关闭" }, { v:"one", t:"单曲" }, { v:"all", t:"列表" }],
-              "「次数」管重复几遍：单曲是这首重放几遍，列表是整个列表走几轮。")
+              [{ v:"off", t:"关闭" }, { v:"one", t:"单曲" }, { v:"all", t:"列表" }])
     + segHTML("次数", "limit", rules.loopLimit,
               [{ v:0, t:"不限" }, { v:1, t:"1" }, { v:2, t:"2" }, { v:3, t:"3" }, { v:5, t:"5" }])
+    + segHTML("播完", "autoNext", rules.autoNext ? 1 : 0, [{ v:1, t:"继续" }, { v:0, t:"暂停" }])
     + segHTML("定时", "timer", rules.timer ? (rules.timer.min || -1) : 0,
               [{ v:0, t:"关" }, { v:15, t:"15 分" }, { v:30, t:"30 分" }, { v:60, t:"60 分" }])
     + `<div class="pnl-row"><span class="pnl-label">到点</span>
@@ -4749,6 +4912,7 @@ rulePanel.addEventListener("click", e => {
   else if (act === "loop")    setLoop(v);
   else if (act === "limit")   setLoopLimit(v);
   else if (act === "quota")   setQuota(v);
+  else if (act === "autoNext") setAutoNext(!!v);
   else if (act === "flip")    setFlip(!!v);
   else if (act === "timer")   v ? armCountdown(v) : (clearTimer(), paintRules());
   renderRulePanel();
@@ -4858,7 +5022,17 @@ markPanel.addEventListener("click", e => {
   }
   const ren = e.target.closest("[data-mkren]"), del = e.target.closest("[data-mkdel]");
   if (ren){ const i = +ren.dataset.mkren; askName("重命名标记", marks[i].name, v => { marks[i].name = v; saveLibrary(); renderMarkPanel(); }); return; }
-  if (del){ const i = +del.dataset.mkdel; const k = marks[i]; marks.splice(i, 1); saveLibrary(); renderMarkPanel(); toast(`已删除「${k.name}」`); return; }
+  if (del){
+    const i = +del.dataset.mkdel; const k = marks[i];
+    // 删之前问一声（第 7 项）—— 这一下原来按了就没了，标记是纯手工攒的，重记不回来。
+    // 回调里按对象找位置而不是用当时那个下标：确认框开着的时候列表可能已经变了。
+    askConfirm("删除标记", `「${k.name}」这个标记会被删掉。文件本身不动，只是 ${fmtTime(k.t)} 那一处不再单独记着。`, "删除", () => {
+      const j = marks.indexOf(k);
+      if (j < 0) return;
+      marks.splice(j, 1); saveLibrary(); renderMarkPanel(); toast(`已删除「${k.name}」`);
+    });
+    return;
+  }
   const cre = e.target.closest("[data-clipren]"), cdel = e.target.closest("[data-clipdel]"), ctog = e.target.closest("[data-cliptog]");
   if (ctog){
     const i = +ctog.dataset.cliptog;
@@ -4868,7 +5042,17 @@ markPanel.addEventListener("click", e => {
     return;
   }
   if (cre){ const i = +cre.dataset.clipren; askName("重命名片段", clips[i].name, v => { clips[i].name = v; saveLibrary(); renderMarkPanel(); }); return; }
-  if (cdel){ const i = +cdel.dataset.clipdel; const c = clips[i]; clips.splice(i, 1); clipAt = -1; saveLibrary(); renderMarkPanel(); toast(`已删除「${c.name}」`); return; }
+  if (cdel){
+    const i = +cdel.dataset.clipdel; const c = clips[i];
+    // 同上，删片段也要问一声（第 7 项）。clipAt 归位放在真删的那一下 ——
+    // 取消了就当没点过，播放头该怎么循环还怎么循环。
+    askConfirm("删除片段", `「${c.name}」这一段会被删掉。文件本身不动，只是不再按 ${fmtTime(c.a)}→${fmtTime(c.b)} 循环。`, "删除", () => {
+      const j = clips.indexOf(c);
+      if (j < 0) return;
+      clips.splice(j, 1); clipAt = -1; saveLibrary(); renderMarkPanel(); toast(`已删除「${c.name}」`);
+    });
+    return;
+  }
   const row = e.target.closest("[data-mk]");
   if (row){ jump(marks[+row.dataset.mk].t); return; }
   const crow = e.target.closest("[data-clip]");
@@ -4987,13 +5171,21 @@ let pendingConfirm = null;
 // 这个确认框是"要不要退出软件"那个（安卓返回键用的）。声明放在这儿而不是
 // 返回键那一段里 —— askConfirm 每次都要清它，搁在下头就有暂时性死区的风险。
 let exitAsked = false;
+/* 确认框那颗「确定」穿哪件衣服（第 16 项）。
+   破坏性的（移除/删除）走珊瑚色，全站就它一个穿；其余的走薄荷 ——— 原来
+   「退出软件」那颗是把 danger 摘掉了事，摘完就剩一颗描边灰白按钮，
+   跟「取消」长得一模一样，两个键分不出主次，也不像这套白+薄荷里的东西。 */
+function cfOkSkin(danger){
+  $("cfOk").classList.toggle("danger",  !!danger);
+  $("cfOk").classList.toggle("primary", !danger);
+}
 function askConfirm(title, text, okLabel, onOk){
   $("cfTitle").textContent = title;
   $("cfText").textContent  = text;
   $("cfOk").textContent    = okLabel || "删除";
   // 破坏性操作才穿珊瑚色（原来只有「移除/删除」）。「退出软件」那颗
-  // 在 askExit 里当场摘掉，所以每开一次都得先穿回去。
-  $("cfOk").classList.add("danger");
+  // 在 askExit 里当场换成薄荷，所以每开一次都得先穿回默认那件。
+  cfOkSkin(true);
   // ⚠️ 每开一个新的确认框就清掉"这是退出框"那一笔 —— 否则用户取消过退出、
   // 后来又弹了个删除确认，按返回键会被当成"确认退出"直接把软件关了。
   exitAsked = false;
@@ -5204,15 +5396,23 @@ function clearPos(m){
   m.pos = 0;
   saveLibrary();
 }
+/* 开机把上次那条摆回播放台的那一趟（第 20 项）。它取走 resumeQuiet 这一位：
+   这一趟**照跳不误、也不吭声** —— 用户要的就是"播放台上显示上次那条和它的进度"，
+   弹一句「已跳到 12:30」是对着一件他刚要求的事报喜，而 resumeMode 是 ask 的人
+   会看见一条"接着看"的浮条 + 停在 00:00，跟他要的东西正相反。
+   取走而不是读一下就完 —— 这一位只对紧跟着的那一次 loadedmetadata 有效。 */
+let resumeQuiet = false;
 function applyResume(el){
   // 切元素的时候旧元素那发迟到的 loadedmetadata 会飘过来，认准当前这个
   if (el !== activeEl) return;
+  const quiet = resumeQuiet; resumeQuiet = false;
   const m = player.current;
   if (!m || !m.pos) return;
   const d = isFinite(el.duration) ? el.duration : 0;
   if (!posWorthy(m, d) || m.pos < POS_MIN || (d && m.pos > d - POS_TAIL)){ m.pos = 0; return; }
   const t = m.pos;
   const jump = () => { el.currentTime = t; };
+  if (quiet){ jump(); return; }
   const mode = resumeMode();
   if (mode === "silent"){ jump(); return; }
   if (mode === "ask"){
@@ -6305,7 +6505,47 @@ function commitLabelInput(){
   const added = addEditLabels(inp.value);
   inp.value = "";
   if (added) renderEditLabels();
+  renderTagDrop();
   return added;
+}
+
+/* ---------- 已有标签下拉（第 9 项） ----------
+   全库用过的标签都是候选，标着各自被几个文件用着 —— 一个标签用得越多，
+   越可能是"该挑的那个"，所以按这个数从多到少排。
+   ⚠️ 候选里**不排除**别的文件上的标签，只排除这一个文件已经有的。 */
+function allLabels(){
+  const n = new Map();
+  for (const m of store.items) for (const t of labelsOf(m)) n.set(t, (n.get(t) || 0) + 1);
+  return [...n.entries()].sort((a, b) => b[1] - a[1] || zhCmp(a[0], b[0]));
+}
+const TAGDROP_MAX = 40;          // 标签多起来能上百个，一屏排不下也没必要全列
+function renderTagDrop(){
+  const box = $("edTagDrop"), inp = $("edLabelIn");
+  if (!box) return;
+  const q = inp.value.trim().toLowerCase();
+  const have = new Set(editLabels.map(t => t.toLowerCase()));
+  const cands = allLabels()
+    .filter(([t]) => !have.has(t.toLowerCase()))
+    .filter(([t]) => !q || t.toLowerCase().includes(q))
+    .slice(0, TAGDROP_MAX);
+  if (!cands.length){
+    // 空的就不弹了，不留一个"没有可挑的"空盒子杵在弹窗里
+    box.hidden = true; box.innerHTML = "";
+    inp.setAttribute("aria-expanded", "false");
+    return;
+  }
+  box.innerHTML = cands.map(([t, n]) =>
+    `<button type="button" class="tagdrop-item" role="option" aria-selected="false"
+        data-tag="${esc(t)}" title="加上「${esc(t)}」">`
+    + `<span class="td-t">${esc(t)}</span><span class="td-n">${n}</span></button>`).join("");
+  box.hidden = false;
+  inp.setAttribute("aria-expanded", "true");
+}
+function hideTagDrop(){
+  const box = $("edTagDrop");
+  if (!box) return;
+  box.hidden = true;
+  $("edLabelIn").setAttribute("aria-expanded", "false");
 }
 
 function openEdit(m){
@@ -6317,6 +6557,7 @@ function openEdit(m){
   editLabels = labelsOf(m).slice();
   $("edLabelIn").value = "";
   renderEditLabels();
+  hideTagDrop();                    // 下拉不跨文件留着 —— 上一条没挑完的候选跟这条无关
   $("editModal").hidden = false;
   setTimeout(() => { $("edName").focus(); $("edName").select(); }, 30);
 }
@@ -6326,6 +6567,7 @@ function closeEdit(){
   editLabels = [];
   $("edLabelIn").value = "";
   renderEditLabels();
+  hideTagDrop();
 }
 /* 标签框：回车 = "这一个加完了"，空框里退格 = 撤回上一个，点 × = 删那一个。
    ⚠️ 回车必须 stopPropagation：下面挂在 #editModal 上的那个 keydown 把弹窗里
@@ -6339,7 +6581,26 @@ $("edChips").addEventListener("keydown", e => {
 });
 // 打出逗号 / 顿号 / 分号就当这一个加完了 —— 跟粘一串是同一条路
 $("edChips").addEventListener("input", e => {
-  if (e.target === $("edLabelIn") && /[,，、;；]/.test(e.target.value)) commitLabelInput();
+  if (e.target !== $("edLabelIn")) return;
+  if (/[,，、;；]/.test(e.target.value)){ commitLabelInput(); return; }
+  renderTagDrop();                  // 边打边筛，打到一半就能看见有没有现成的
+});
+/* 已有标签下拉：光标进标签框就摆出来，点一个加一个。
+   ⚠️ pointerdown 上 preventDefault 是必须的 —— 不拦的话输入框会先 blur，
+   blur 里那条 hideTagDrop 抢在 click 之前把盒子藏了，这一下就点了个空。 */
+$("edLabelIn").addEventListener("focus", renderTagDrop);
+$("edLabelIn").addEventListener("blur", () => setTimeout(hideTagDrop, 0));
+$("edTagDrop").addEventListener("pointerdown", e => e.preventDefault());
+$("edTagDrop").addEventListener("click", e => {
+  const b = e.target instanceof Element ? e.target.closest("[data-tag]") : null;
+  if (!b) return;
+  const t = b.dataset.tag;
+  // 走 addEditLabels 而不是直接 push：去重和"最多 30 个"那条上限只有一处，
+  // 两条路各写一遍迟早会对不上。
+  if (t && addEditLabels(t)) renderEditLabels();
+  $("edLabelIn").value = "";
+  $("edLabelIn").focus();           // 连着挑几个不用每回重新点一下
+  renderTagDrop();
 });
 $("edChips").addEventListener("click", e => {
   const x = e.target instanceof Element ? e.target.closest(".chip-x") : null;
@@ -6347,9 +6608,19 @@ $("edChips").addEventListener("click", e => {
   const chip = x.closest(".chip");
   const i = [...$("edChips").querySelectorAll(".chip")].indexOf(chip);
   if (i < 0) return;
-  editLabels.splice(i, 1);
-  renderEditLabels();
-  $("edLabelIn").focus();
+  const t = editLabels[i];
+  // 点 × 删标签也要问一声（第 13 项）：那颗叉在手机上就十来个像素宽，
+  // 而标签是用户自己一个个敲进去的，误触一下就得重敲。
+  // 空框里的退格不在此列 —— 那是有意为之的一下，而且退格删掉的那个
+  // 自己心里有数（就在光标前一个）。
+  // 确认框和这个弹窗同档 z-index，靠 DOM 顺序压在上面（#confirmModal 在后）。
+  askConfirm("删掉标签", `「${t}」会从这个文件的标签里去掉。还没保存，点「取消」就都还在。`, "删掉", () => {
+    const j = editLabels.indexOf(t);
+    if (j < 0) return;
+    editLabels.splice(j, 1);
+    renderEditLabels();
+    $("edLabelIn").focus();
+  });
 });
 $("edCancel").addEventListener("click", closeEdit);
 $("edOk").addEventListener("click", () => {
@@ -6470,6 +6741,13 @@ function reallyRemoveItems(list){
 
   store.items = store.items.filter(m => !ids.has(m.id));
   ids.forEach(id => store.byId.delete(id));
+  /* 个人主页那个「历史导入文件」跟着落（第 8 项）。原来它只涨不跌，
+     删掉的文件一直记在里面，于是"历史导入 30"旁边写着"当前 12"，
+     看着就是个错数。
+     ⚠️ 按"删掉的条数"减是个近似：导入那一条路只给 list（真正新进库的）加过数，
+        重连回离线的、拿新文件覆盖旧的都没加过 —— 删掉后者会多减一点。
+        宁可多减也不减成负数，所以下面兜了一道 0。 */
+  if (list.length) store.profile.imported = Math.max(0, (store.profile.imported || 0) - list.length);
   // 存在软件里的文件本体也跟着删掉，不然占着空间还再也回不来。
   // 帧封面是同一条记录带出来的衍生物，一起清 —— 只删本体的话，
   // 同一个文件再导进来命中同一个 id，卡片会显示上一次的那一帧。
@@ -7030,6 +7308,17 @@ $("rdOk").addEventListener("click", () => {
    ============================================================ */
 let addMenuFor = null;
 const addMenu = $("addMenu");
+/* 「更多操作」里收藏夹/待播两节折不折。
+   侧栏那份（navSection）折起来还露前五条，这里干脆一条不露 —— 菜单是浮层，
+   折起来是为了把上面那三样常点的留在屏幕里，露一半既短不了多少又更乱。
+   ⚠️ 只有条目**多于**这个数才默认折。少数几个夹子的人（大多数）看到的
+   还是原样，不会突然发现自己的收藏夹"不见了"。 */
+const ADD_FOLD_AT = 6;
+function addSecFolded(kind, n){
+  const v = store.settings.addOpen?.[kind];
+  if (v === true || v === false) return v;      // 手动调过就一直听他的
+  return n > ADD_FOLD_AT;
+}
 
 function openAddMenu(anchor, itemId){
   addMenuFor = itemId;
@@ -7041,19 +7330,27 @@ function openAddMenu(anchor, itemId){
       <span class="am-check"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3.5 8.5 6.5 11.5 12.5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </button>`;
 
+  // 一节 = 标题（右边一颗「收起 / 展开」）+ 条目。折起来时条目压根不渲染。
+  const section = (kind, label, list, inIt, icon) => {
+    const held = addSecFolded(kind, list.length);
+    return `<div class="am-head"><span class="am-sec">${label}</span>
+        ${list.length > 1 ? `<button class="am-fold" data-fold="${kind}"
+            aria-expanded="${!held}">${held ? "展开" : "收起"}</button>` : ""}</div>`
+      + (held ? "" : list.map(x => row(kind, x.id, x.name, inIt(x.id), icon)).join(""));
+  };
+
   addMenu.innerHTML =
-    `<div class="am-sec">添加到</div>`
-    + row("coll", FAV_ID, "喜欢", inColl(FAV_ID), ICON_HEART)
-    + `<div class="am-sep"></div><div class="am-sec">收藏夹</div>`
-    + store.collections.filter(c => c.id !== FAV_ID).map(c => row("coll", c.id, c.name, inColl(c.id), ICON_COLL)).join("")
-    + `<button class="am-item am-new" data-new="coll">＋ 新建收藏夹</button>`
-    + `<div class="am-sep"></div><div class="am-sec">待播</div>`
-    + store.queues.map(q => row("queue", q.id, q.name, inQueue(q.id), ICON_QUEUE)).join("")
-    + `<button class="am-item am-new" data-new="queue">＋ 新建待播</button>`
-    + `<div class="am-sep"></div>`
-    + `<button class="am-item" role="menuitem" data-act="info">${ICON_INFO}<span class="am-name">详情</span></button>`
+    // 这三样放最上面（第 6 项）：夹子一多，原来它们在末尾，得先滚过一整列
+    // 才够得着，而这偏偏是每次进来最常点的那几下。
+      `<button class="am-item" role="menuitem" data-act="info">${ICON_INFO}<span class="am-name">详情</span></button>`
     + `<button class="am-item" role="menuitem" data-act="edit">${ICON_PENCIL}<span class="am-name">编辑详情</span></button>`
-    + `<button class="am-item am-del" role="menuitem" data-act="delete">${ICON_TRASH}<span class="am-name">从资料库移除</span></button>`;
+    + `<button class="am-item am-del" role="menuitem" data-act="delete">${ICON_TRASH}<span class="am-name">从资料库移除</span></button>`
+    + `<div class="am-sep"></div><div class="am-sec">添加到</div>`
+    + row("coll", FAV_ID, "喜欢", inColl(FAV_ID), ICON_HEART)
+    + `<div class="am-sep"></div>`
+    + section("coll", "收藏夹", store.collections.filter(c => c.id !== FAV_ID), inColl, ICON_COLL)
+    + `<div class="am-sep"></div>`
+    + section("queue", "待播", store.queues, inQueue, ICON_QUEUE);
 
   addMenu.hidden = false;
   anchor.setAttribute("aria-expanded", "true");
@@ -7080,22 +7377,19 @@ function closeAddMenu(){
 addMenu.addEventListener("click", e => {
   const itemId = addMenuFor;
   if (!itemId) return;
-  const newBtn = e.target.closest("[data-new]");
-  if (newBtn){
-    const kind = newBtn.dataset.new;
-    closeAddMenu();
-    // 直接走建的那条路，不去"点"侧栏那颗 + —— 那颗现在弹的是三选一菜单，
-    // 在这儿点等于又叠一层浮层，还得再选一次
-    if (kind === "coll"){
-      askName("新建收藏夹", "", name => {
-        const c = newColl(name);
-        store.collections.push(c);
-        renderAll(); saveLibrary();
-        toast(`已创建「${name}」`);
-      });
-    } else {
-      askName("新建待播", "", name => { addQueue("", name); toast(`已创建「${name}」`); });
-    }
+  // 收起 / 展开。这一下不关菜单，就地重画 —— 和勾选夹子那一下同一个路数。
+  // （原来这个位置是「＋ 新建收藏夹 / ＋ 新建待播」，第 6 项把这两颗撤了：
+  //   建一个新的要走侧栏那两颗 +，那是它们的正门。）
+  const foldBtn = e.target.closest("[data-fold]");
+  if (foldBtn){
+    const kind = foldBtn.dataset.fold;
+    store.settings.addOpen = store.settings.addOpen || { coll:null, queue:null };
+    // aria-expanded 报的是**现在**的状态，所以它就是要写回去的那个值：
+    // 现在是展开的 → 这一下就是收起。
+    store.settings.addOpen[kind] = foldBtn.getAttribute("aria-expanded") === "true";
+    saveLibrary();
+    const a = document.querySelector(`[data-more="${CSS.escape(itemId)}"]`);
+    if (a) openAddMenu(a, itemId);
     return;
   }
   const act = e.target.closest("[data-act]");
@@ -7614,7 +7908,13 @@ $("viewMain").addEventListener("click", e => {
   const card = e.target.closest(".card, .mrow");
   if (card){
     const m = store.byId.get(card.dataset.id);
-    if (m) load(m);
+    if (m){
+      // 从资料库点开的，资料库就是当前播放列表（顺序 = 存放次序，见 libOrder）。
+      // 不认领的话 playlistRef() 会退回默认待播，而这一首多半不在那里面 ——
+      // stepOrder() 找不到当前位置就返回 order[0]，上一首/下一首全成了"跳回第一首"。
+      if (route.kind === "audio" || route.kind === "video") store.playlist = { kind: route.kind };
+      load(m);
+    }
   }
 });
 
@@ -7684,6 +7984,28 @@ const slotDelta = (rects, from, to) => ({
   dy: rects[to].top  - rects[from].top,
 });
 
+/* 触摸起拖以后，浏览器还不知道这一下手势归谁：手指一动它就可能判成
+   "滚动列表"，然后给这个 pointer 发一条 pointercancel 把手势整个收走 ——
+   拖拽当场弹回原位。用户看到的就是"长按有反应、一拖就卡回去"（第 10 项）。
+   行上不能写 touch-action:none（写了就没法在行上滑动滚列表，而列表几乎
+   全是行），所以等长按成立、拖拽真起来了，再临时拦一道：
+   ⚠️ 必须拦 **touchmove** 而不是 pointermove —— 滚动是 touch 那一层的事，
+      在 pointermove 上 preventDefault 拦不住。
+   ⚠️ 必须 passive:false —— document/window 上的 touchmove 默认是 passive 的，
+      那种监听器里 preventDefault 会被直接忽略，还会在控制台骂一句。
+   抬手（endDrag）就摘掉，滚动照旧。 */
+let dragTouchGuard = false;
+function blockDragScroll(e){ if (drag) e.preventDefault(); }
+function armDragTouchGuard(on){
+  if (on === dragTouchGuard) return;
+  dragTouchGuard = on;
+  if (on) addEventListener("touchmove", blockDragScroll, { passive:false });
+  else    removeEventListener("touchmove", blockDragScroll, { passive:false });
+}
+// 长按还会撞上系统的"复制 / 存储图片"菜单，一弹出来这一拖也黄了。
+// 拖拽期间一律按掉；不在拖的时候不碰，右键菜单该有还有。
+addEventListener("contextmenu", e => { if (drag) e.preventDefault(); });
+
 function beginDrag(e, row, index, ctx){
   const rows = dragRows(ctx);
   const rects = rows.map(r => r.getBoundingClientRect());
@@ -7701,6 +8023,7 @@ function beginDrag(e, row, index, ctx){
   row.setAttribute("aria-grabbed", "true");
   document.body.style.userSelect = "none";
   try{ if (e.pointerId >= 0) row.setPointerCapture(e.pointerId); }catch{}
+  armDragTouchGuard(true);      // 这一条是手机上拖得动的前提，理由见它上头
 }
 
 // 目标槽位 = 拖拽项的中心离得最近的那一格（2D，栅格里也一样成立）
@@ -7784,6 +8107,7 @@ function endDrag(commit){
   const { row, rows, index, target, rects } = d;
   cancelAnimationFrame(d.raf);
   drag = null;                                   // 先清掉，pointermove 就不会再进来
+  armDragTouchGuard(false);                      // 拖完了把手势还给滚动
   document.body.style.userSelect = "";
   // 起过拖就不算"点一下"。原来只在名次真变了的时候才拦，
   // 于是"抓住把手晃一下又放回原位"落地就播 —— 用户报的就是这个。
@@ -8090,7 +8414,6 @@ function closeFilterMenu(){
 
 function openFilterMenu(anchor){
   const field = anchor.dataset.f;
-  if (field === "clear"){ filterArtist = ""; filterLabel = ""; renderMain(); return; }
   // 已经开着同一个就收起来（再点一下等于取消）
   if (filterMenuField === field && !filterMenu.hidden){ closeFilterMenu(); return; }
   filterMenuField = field;
@@ -8258,9 +8581,26 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.4";
+const APP_VERSION = "0.1.5";
 
 const CHANGELOG = [
+  { v: "0.1.5", date: "2026-09-16", title: "顺序、确认与手机端",
+    items: [
+      "手机端：「从资料库添加」那个列表不再只显示左半边，右半边的勾选框和文件名回到屏幕里了",
+      "资料库：直接在里面点开一首，上一个 / 下一个就按资料库里摆着的次序走，不再总是跳回第一首",
+      "播放设置：多了一行「播完」—— 选「继续」放完自动下一个，选「暂停」就停在原地等你按播放（默认继续）",
+      "手机端：播放台上看得见已经播到哪儿了",
+      "更多操作：详情 / 编辑详情 / 从资料库移除提到最上面；收藏夹和待播多了「收起 / 展开」，东西多了默认折着",
+      "删除标记点、删除片段、删掉标签现在都会先问一句，误触不再直接没",
+      "编辑详情：标签框下面列出全库用过的标签，点一下就加上，不用每次重敲",
+      "手机端：播放列表和收藏夹里的条目能拖了，排序那颗菜单也点得开了",
+      "片段循环：只放勾上的那几段，两段中间没勾的地方不再跟着一起放",
+      "滚动条全部收起来了（写歌词那种输入框除外）；资料库筛选那颗「清除」删掉，下拉里选「全部」就是清",
+      "返回键：资料库 / 收藏夹 / 待播 是同一层，在这三页按返回键问的是要不要退出，不再照着点击顺序往回倒",
+      "退出确认框和「到点」那颗时钟都换成了白 + 薄荷绿",
+      "手机端：上一个 / 下一个按钮大了一圈；点任何按钮不再闪那个蓝色方框",
+      "重开软件，播放台上摆着上次退出时那一条，停在原来的位置，而且是暂停着的",
+    ] },
   { v: "0.1.4", date: "2026-09-15", title: "统计、镜像与软件锁",
     items: [
       "我的：多了四格读数 —— 总播放次数、总时长、软件当前文件、历史导入文件",
@@ -8566,8 +8906,9 @@ function askExit(){
     exitApp();
   });
   exitAsked = true;          // 放在 askConfirm 之后 —— 它开头会把这一位清掉
-  // 「退出软件」不是「移除/删除」，不该穿珊瑚色那件衣服（全站只有那两个键穿）
-  $("cfOk").classList.remove("danger");
+  // 「退出软件」不是「移除/删除」，不该穿珊瑚色那件衣服（全站只有那两个键穿），
+  // 换成这套配色里的主色薄荷（第 16 项）。
+  cfOkSkin(false);
 }
 
 function handleBack(){
@@ -8580,8 +8921,8 @@ function handleBack(){
   if (closeTopLayer()) return;
   // 2. 正在看视频，先退回列表 —— 这一步不动 route，所以不占返回栈
   if ($("viewStage").classList.contains("active")){ stopVideoForLeave(); showList(); return; }
-  // 3. 回上一个页面
-  if (routeStack.length){
+  // 3. 往回退 —— 只有子页才退（见 SUB_ROUTES）
+  if (SUB_ROUTES.has(route.kind) && routeStack.length){
     const r = routeStack.pop();
     routeBack = true;        // 让 navTo 知道这趟是返回，别再压回来
     navTo(r.kind, r.id);
@@ -8730,8 +9071,23 @@ setTimeout(() => $("splash")?.setAttribute("hidden", ""), 1700);
 // 那就等于"存进软件里"是句空话。失败也不影响使用，只是回到了可被回收的状态。
 navigator.storage?.persist?.().catch(() => {});
 
+/* 把上次退出时摆在播放台上的那一条摆回来，停在它上次的位置（第 20 项）。
+   三条闸：存档里记着的那条还在（被删了、被移出库了就当没这回事）、
+   它的本体还在（只是条「索引」条目的话 load 会弹一句提示，开机不该弹）、
+   而且它确实有个位置可回。
+   ⚠️ autoplay:false —— 开软件不该自己响起来；用户要的正是"暂停状态"。
+   ⚠️ restore:true 两处作用：不换页（视频不推舞台）、不自动开唱片页。 */
+function restoreLastPlayed(){
+  const id = store.settings.lastId;
+  if (!id) return;
+  const m = store.byId.get(id);
+  if (!m || !m.file) return;
+  load(m, { autoplay:false, restore:true });
+}
+
 restoreLibrary().then(ok => {
   if (!ok && pendingDir) toast("资料库还在，点「添加文件」里的「选文件夹」重新授权同一个目录就恢复");
+  restoreLastPlayed();
 }).catch(err => {
   // 恢复整个挂了（库读不出来之类）。这时候一个收藏夹/待播都没有，
   // 补一个空待播，至少还有块地方能放东西、能播。
