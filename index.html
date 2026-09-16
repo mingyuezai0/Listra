@@ -6,6 +6,28 @@
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#F6FAF8">
 <title>听雨</title>
+<script>
+/* ============================================================
+   主题要在**第一帧之前**挂上（第二十一批第 9 项）
+   ---- 原来这件事是主脚本干的，可主脚本挂在文档最末尾 —— 浏览器早就能把
+        开屏和锁屏先画一遍了。于是"上次选了黑夜 / 关灯"的人每次打开都会
+        先闪一下白的，锁屏尤其明显（它是整屏的）。
+   ---- 这里只干一件事：把 <html> 上那两个属性写好，其余什么都不碰。
+   ---- ⚠️ 属性和主脚本 paintTheme() 里写的是**同一套**，改一处必须改两处。
+   ---- ⚠️ 挂在 <html> 不是 <body>：这一段跑的时候 body 还不存在。
+   ---- ⚠️ 普通 script，不是 defer/module —— 那两种都要等解析完，就白写了。
+   ============================================================ */
+(function(){
+  var v = null;
+  try{ v = localStorage.getItem("tingyu.theme"); }catch(e){}
+  var off = v === "off", dark = v === "dark";
+  var d = document.documentElement;
+  d.setAttribute("data-theme", dark ? "dark" : "fresh");
+  if (off) d.setAttribute("data-lights", "off");
+  var m = document.getElementsByName("theme-color")[0];
+  if (m) m.setAttribute("content", dark ? "#0B100E" : off ? "#858886" : "#F6FAF8");
+})();
+</script>
 <style>
 /* ============================================================
    设计令牌 —— 白色机箱 / 薄荷绿信号 / 等宽读数
@@ -128,17 +150,24 @@ html[data-theme="dark"]{
    ⚠️ 只在关灯模式下抬 —— 平时抬上去会盖住唱片页那一层（150）。 */
 #dim{position:fixed;inset:0;z-index:190;background:rgba(4,10,8,.46);
      pointer-events:none;display:none}
-body.lights-off #dim{display:block}
-body.lights-off .video-wrap{z-index:195}
+/* ⚠️ 选择器挂在 <html> 上不挂在 <body> 上（第二十一批第 9 项）：
+   主题得由 <head> 里那段**第一帧之前**的小脚本挂上去，那会儿 body 还没解析出来。
+   原来写的是 body.lights-off —— 只有等主脚本跑完才有这个类，开屏和锁屏
+   会先按清新的白底画一遍再被压暗，用户看到的就是"闪一下白"。 */
+html[data-lights="off"] #dim{display:block}
+html[data-lights="off"] .video-wrap{z-index:195}
 
-/* 暗幕盖不到的那两层（弹窗 220 / 锁屏 350）各自再压一遍 ——
+/* 暗幕盖不到的那几层各自再压一遍 ——
    不压的话，关灯模式下开个设置，最亮的东西恰好是你正在看的那块白板。
    为什么不干脆把暗幕抬到它们上面：暗幕一抬过 220，为了"画面不受影响"就得把
    .video-wrap 抬得更高，那样一边看视频一边开弹窗时，画面会盖在弹窗上。
    亮度取 .55 是为了跟暗幕压出来的效果对齐（255×0.54 ≈ 138）。
+   ⚠️ 锁屏（350）和开屏（400）都在暗幕之上，所以这两层得单独压 ——
+      少了开屏那一条，关灯模式每次打开都会先闪一整屏白（第 9 项报的就是这个）。
    ⚠️ 提示条（300）和拖放层（200）不压 —— 一个是通知、一个是拖拽反馈，本来就该醒目。 */
-body.lights-off .modal,
-body.lights-off #lockScreen{filter:brightness(.55)}
+html[data-lights="off"] .modal,
+html[data-lights="off"] #lockScreen,
+html[data-lights="off"] #splash{filter:brightness(.55)}
 
 *{box-sizing:border-box;
   /* 手机点任何一颗按钮，系统会在这块区域上闪一下半透明的蓝框。这套配色里
@@ -246,6 +275,8 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .btn[disabled]:hover{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
 .btn.primary[disabled]:hover{background:var(--mint-500);border-color:var(--mint-500);color:#fff}
 .set-where{margin-bottom:8px}
+/* 两颗并排时（电脑端多了那颗「更改」）外边距归外层管，不然两行高度对不齐 */
+.set-inline .set-where{margin-bottom:0}
 .btn.primary:hover{background:var(--mint-600);border-color:var(--mint-600);color:#fff}
 /* 「播放列表」拉开的样子。和 .btn:hover 同权重，所以必须排在它后头，
    不然鼠标一放上去就被 hover 的颜色顶掉，看不出现在是展开的。 */
@@ -1453,6 +1484,98 @@ body.pip-on .fs-ui{display:none}
    ---- 盖住整个窗口、播放台浮在它上面（用户要的）。做法是把播放台抬到 160 ——
         .app 自己不构成层叠上下文，播放台(40)和这一层(150)是在同一个上下文里比大小的。
    ============================================================ */
+/* ============================================================
+   教程页（第二十一批第 10 项）
+   ---- 版式照 DeepSeek 官方接口文档那种"左目录、右正文"的文档站：
+        左边一条常驻目录，右边一栏正文，正文里各级标题、段落、列表、表格。
+   ---- 是一整页而不是弹窗：用户点的是侧栏那颗「教程」，要的是"打开一个新页面"。
+        所以 fixed + inset:0，比侧栏(20)、顶栏(30)、播放台(40)、唱片页(150) 都高，
+        又低于拖放遮罩(200)、弹窗(220)和 toast(300) —— 教程开着的时候
+        照样能弹确认框、能看见提示。
+   ---- 用 --paper 而不是 --surface：文档页要的是"纸"，跟开屏页同一个语言。
+   ============================================================ */
+#guidePage{
+  position:fixed;inset:0;z-index:185;background:var(--paper);
+  display:flex;flex-direction:column;
+  padding-top:var(--sat);padding-bottom:var(--sab);
+}
+#guidePage:not([hidden]){animation:guideIn .3s cubic-bezier(.34,1.4,.5,1) both}
+@keyframes guideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.gd-top{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;height:var(--top-h);
+  padding:0 18px;border-bottom:1px solid var(--line);background:var(--paper);
+}
+.gd-back{
+  display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+  color:var(--ink-2);font:inherit;font-size:12.5px;cursor:pointer;
+}
+.gd-back:hover{background:var(--surface-2);color:var(--ink-1)}
+.gd-title{font-size:13px;font-weight:600;color:var(--ink-1);letter-spacing:.02em}
+.gd-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.06em}
+.gd-body{flex:1 1 auto;display:grid;grid-template-columns:216px minmax(0,1fr);min-height:0}
+
+/* 目录。自己滚，不跟着正文走 —— 正文滚到一半还得能一眼看到全貌。 */
+.gd-toc{overflow-y:auto;padding:20px 10px 40px 18px;border-right:1px solid var(--line)}
+.gd-toc-cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--ink-3);
+  text-transform:uppercase;margin:0 0 10px 9px}
+.gd-toc a{
+  display:block;padding:6px 9px;border-radius:var(--r-sm);font-size:12.5px;
+  color:var(--ink-2);text-decoration:none;line-height:1.45;
+}
+.gd-toc a:hover{background:var(--surface-2);color:var(--ink-1)}
+.gd-toc a.on{background:var(--mint-100);color:var(--mint-700);font-weight:600}
+.gd-toc a .gd-num{font-family:var(--mono);font-size:10px;color:var(--ink-3);
+  margin-right:7px;font-variant-numeric:tabular-nums}
+.gd-toc a.on .gd-num{color:var(--mint-700)}
+
+/* 正文。max-width 是按"一行 40 来个汉字"定的 —— 再宽眼睛就得来回扫。 */
+.gd-doc{overflow-y:auto;padding:34px 44px 90px;scroll-behavior:smooth}
+.gd-inner{max-width:760px;margin:0 auto}
+.gd-doc section{scroll-margin-top:18px}
+.gd-doc section + section{margin-top:44px}
+.gd-h1{font-size:20px;font-weight:650;color:var(--ink-1);margin:0 0 6px;letter-spacing:.01em}
+.gd-lead{margin:0 0 20px;font-size:13px;color:var(--ink-3);line-height:1.8}
+.gd-h2{font-size:14.5px;font-weight:620;color:var(--ink-1);margin:26px 0 10px}
+.gd-h2:first-of-type{margin-top:0}
+.gd-p{margin:0 0 12px;font-size:13.5px;line-height:1.95;color:var(--ink-2)}
+.gd-ul{margin:0 0 14px;padding-left:19px;font-size:13.5px;line-height:1.95;color:var(--ink-2)}
+.gd-ul li{margin-bottom:5px}
+.gd-ul li::marker{color:var(--mint-500)}
+.gd-doc b,.gd-doc strong{color:var(--ink-1);font-weight:620}
+/* 界面上的字（按钮名、开关名）一律等宽 + 描边底，和正文分得开。
+   跟元数据用等宽字是同一条规矩 —— "像测量仪器不像点唱机"。 */
+.gd-k{
+  font-family:var(--mono);font-size:12px;padding:1px 5px;border-radius:4px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--ink-1);
+  white-space:nowrap;
+}
+.gd-note{
+  margin:0 0 14px;padding:11px 14px;border-radius:var(--r-sm);
+  background:var(--mint-100);border-left:2px solid var(--mint-500);
+  font-size:12.5px;line-height:1.85;color:var(--ink-2);
+}
+.gd-table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:13px}
+.gd-table th,.gd-table td{
+  text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);
+  color:var(--ink-2);line-height:1.7;vertical-align:top;
+}
+.gd-table th{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  color:var(--ink-3);text-transform:uppercase;font-weight:500}
+.gd-table tr:last-child td{border-bottom:0}
+.gd-table td:first-child{white-space:nowrap;color:var(--ink-1);font-weight:550}
+.gd-key{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:5px;
+  border:1px solid var(--line);border-bottom-width:2px;background:var(--surface);
+  color:var(--ink-1);white-space:nowrap}
+
+/* 窄屏：目录整条收起来（两栏挤在手机上是没法读的），改成正文开头一份页内目录 */
+@media (max-width:860px){
+  .gd-body{grid-template-columns:minmax(0,1fr)}
+  .gd-toc{display:none}
+  .gd-doc{padding:22px 18px 80px}
+  .gd-h1{font-size:18px}
+}
+
 #vinyl{
   position:fixed;inset:0;z-index:150;background:var(--paper);
   display:grid;place-items:center;
@@ -1606,7 +1729,10 @@ body.vinyl-wide #lyricBackBtn{display:none}
    响应式
    ============================================================ */
 @media (max-width:860px){
-  :root{--top-h:52px;--deck-h:124px}
+  /* 124 → 146：第二十一批第 4 项把时间和喇叭挪到了播放台的第二行，
+     整台子多出一行（11.5px 的字一行约 17px + 4px 行距）。.app 那一轨是写死的
+     calc(var(--deck-h) + var(--sab))，不跟着加高，新那一行就被裁在台子外面了。 */
+  :root{--top-h:52px;--deck-h:146px}
   /* 侧栏不再占一行 —— 它变成从左边滑出来的抽屉，所以网格里没有 side 这一轨了。 */
   .app{
     grid-template-columns:minmax(0,1fr);
@@ -1656,21 +1782,34 @@ body.vinyl-wide #lyricBackBtn{display:none}
   /* 26px 的开关手指够不着，触摸屏上放大一圈 */
   .deck-head{padding:12px 14px 0;gap:8px}
   .deck-tool{width:30px;height:30px}
-  /* 右边那列回到桌面那条 minmax(min-content,1fr)：时间要占多宽就占多宽，
-     剩下的才归标题。写成 1fr 的话两边对半分，那块表反而没地方站。 */
-  .deck-row{grid-template-columns:minmax(0,1fr) auto minmax(min-content,1fr);gap:10px;padding:0 12px 8px}
+  /* 第二十一批第 4 项：手机上时间要显示全「xx:xx / xx:xx」。
+     ---- 原来是三列挤在一行里，只留已播的那半，「/ 总长」被 CSS 藏掉 ——
+          实测时间那一格 320/360/390 宽下只有 36/56/71px，而「03:45 / 04:12」
+          要 84px，全塞进去就得把标题挤没。
+     ---- 现在把尾巴那一列（时间 + 喇叭）**整列挪到第二行**：传输键那一排
+          不再跟它抢宽度，时间拿到的是整幅宽度，连「1:23:45 / 2:34:56」
+          都装得下。用网格区域而不是 flex-wrap —— 这一行本来就是 grid，
+          改 areas 不用动 DOM。
+     ---- ⚠️ 多出一行，--deck-h 必须跟着加高（见上面那个 :root）：
+            .app 的第三行是写死的 calc(var(--deck-h) + var(--sab))，
+            不加高的话新那一行会被裁在播放台下边缘外面。
+     ---- ⚠️ 第一行仍然是**三**列，第三格留空（areas 里的 `.`）—— 两个 1fr
+          夹一个 auto，传输键才落在正中间；写成两列的话它会被推到右边去
+          （布局套件 W320-22「传输键在播放台正中」逮的就是这个）。 */
+  .deck-row{
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    grid-template-areas:"lead trans ." "tail tail tail";
+    row-gap:4px;padding:0 12px 8px;
+  }
+  .deck-lead{grid-area:lead}
+  .deck-transport{grid-area:trans}
+  .deck-tail{grid-area:tail;justify-content:space-between;gap:10px}
   .deck-art{display:none}
-  /* 手机上也要看得见播放时间（第 5 项）。「规则读数」那枚仍然藏起来 ——
-     它只在有规则在跑的时候才有字，平时是个空盒子，窄屏那一列全是位置。
-     ⚠️ 只留已播的那半：实测这个槽位 320/360/390 宽下是 36/56/71px，
-     而「03:45 / 04:12」要 84px（时长过小时还要 110px）—— 全塞进去就得
-     把标题挤到 28px。总时长在列表行的副标题、播放轴的提示气泡里都有。
-     桌面那条 min-width:19ch 是给帧进帧退让位的，窄屏帧按钮搬去了
-     传输键那一排，这里不必再留。 */
+  /* 「规则读数」那枚仍然藏起来 —— 它只在有规则在跑的时候才有字，
+     平时是个空盒子，摆在那儿就是个空位。 */
   .deck-time{display:none}
-  #deckTime{display:block;min-width:0;font-size:11px}
-  #deckTime .dt-total{display:none}
-  .deck-tail{gap:10px}
+  /* 桌面那条 min-width:19ch 是给帧进帧退让位的，窄屏帧按钮搬去了传输键那一排 */
+  #deckTime{display:block;min-width:0;font-size:11.5px}
   .deck-transport{gap:4px}
   .tbtn{width:36px;height:36px}
   .tbtn.play{width:44px;height:44px}
@@ -1763,16 +1902,20 @@ body.vinyl-wide #lyricBackBtn{display:none}
   font:inherit;font-size:12.5px;color:var(--ink-3);text-decoration:underline;
   text-underline-offset:3px}
 .lock-forgot:hover{color:var(--mint-ink)}
-/* 定钟点那一屏 */
+/* 「忘了密码」那一屏。原来是"填几个小时"（一个 .lock-wait-row 数字框），
+   第二十一批第 1 项把时长挪进了设置，这一屏只剩一句说明 + 两颗键。 */
 .lock-wait{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
-.lock-wait-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
-.lock-wait-row input{width:76px;height:38px;padding:0 10px;border:1px solid var(--line);
-  border-radius:var(--r-sm);outline:none;background:var(--surface);text-align:center;
-  font-family:var(--mono);font-size:15px;color:var(--ink)}
-.lock-wait-row input:focus{border-color:var(--mint-500)}
 .lock-wait-note{margin:0;font-size:12px;color:var(--ink-3);text-align:center;line-height:1.7}
+.lock-wait-note b{color:var(--ink-2);font-weight:600}
 .lock-wait-btns{display:flex;gap:9px;width:100%}
 .lock-wait-btns .btn{flex:1}
+
+/* 锁屏上那行倒计时，排在密码框下面（第二十一批第 1 项）。
+   等宽字 —— 秒数是每秒钟都在变的，比例字会让整行左右抽动。 */
+.lock-left{margin:13px 0 0;font-family:var(--mono);font-size:12.5px;letter-spacing:.02em;
+  color:var(--ink-3);text-align:center}
+.lock-left b{color:var(--mint-ink);font-weight:600}
+.lock-left[hidden]{display:none}
 
 /* 九宫格。九个点是绝对定位的，位置由 --px/--py 给（百分比），
    连线那一层 SVG 用的是同一套百分比坐标（viewBox 0 0 100 100 +
@@ -1785,17 +1928,32 @@ body.vinyl-wide #lyricBackBtn{display:none}
   pointer-events:none}
 .pad-lines polyline{fill:none;stroke:var(--mint-500);stroke-width:3;
   stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.pad-dot{position:absolute;left:var(--px);top:var(--py);width:15px;height:15px;
-  margin:-7.5px 0 0 -7.5px;border-radius:50%;background:var(--surface);
-  border:2px solid var(--line);transition:background .12s,border-color .12s}
+/* ⚠️ 第二十一批第 2 项：原来描边用的是 --line（#E3EFEA），在白底上跟没画一样，
+   用户的原话是"配色太浅了，看不太清"。描边换 --ink-3（浅灰绿 / 黑夜模式里翻成浅色），
+   点也一并放大到 20px —— 光加深不加粗还是显小。
+   两个主题都不许出现有彩色，所以还是白底 + 灰绿描边这一套。 */
+.pad-dot{position:absolute;left:var(--px);top:var(--py);width:20px;height:20px;
+  margin:-10px 0 0 -10px;border-radius:50%;background:var(--surface);
+  border:2.5px solid var(--ink-3);transition:background .12s,border-color .12s}
 .pad-dot.on{background:var(--mint-500);border-color:var(--mint-500)}
 .pad.fail .pad-dot.on{background:var(--coral);border-color:var(--coral)}
 .pad.fail .pad-lines polyline{stroke:var(--coral)}
 
-/* 设置里那两行嵌套的（解锁方式跟在软件锁下面） */
+/* 设置里那几行嵌套的（解锁方式、忘了密码等多久，都跟在软件锁下面） */
 .set-sub{margin-top:11px;padding-left:11px;border-left:2px solid var(--line-2)}
 .set-sub[hidden]{display:none}
 .set-sublabel{display:block;font-size:12px;color:var(--ink-3);margin-bottom:8px}
+/* 一个数字输入 + 单位。单位不放进输入框里 —— 放进去就得在读数里掺字，
+   而 .set-num 是等宽字、右对齐的，掺了字每次改数值整行都会跳。 */
+.set-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* 说明文字挤在按钮后面会跟按钮抢宽度，让它自己占一整行 */
+.set-inline > .set-note{width:100%;margin:8px 0 0}
+.set-num{width:88px;height:36px;padding:0 10px;border:1px solid var(--line);
+  border-radius:var(--r-sm);outline:none;background:var(--surface);color:var(--ink);
+  font-family:var(--mono);font-size:14px;text-align:center}
+.set-num:focus{border-color:var(--mint-500)}
+.set-inline-unit{font-size:12.5px;color:var(--ink-3)}
+.set-subnote{margin:8px 0 0;font-size:12px;color:var(--ink-3);line-height:1.7}
 
 /* 没有 hover 的设备上，滑杆只认 .open，不能靠鼠标划过。
    这条必须挂在 hover 能力上而不是屏宽上——窄窗口的桌面端一样有鼠标。 */
@@ -2194,11 +2352,11 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <div class="deck-tail">
         <!-- 规则读数：定时还剩多久、定量还剩几首。窄屏藏起来，那儿只留按钮上的点 -->
         <span class="deck-time rule-read" id="ruleBadge" hidden></span>
-        <!-- ⚠️ 「/ 总长」这半截的 .dt-total 一开始就得包上 —— 窄屏是靠它藏掉
-             右半截的（见窄屏块里 #deckTime 那条注释），而 onTime() 只在真的
-             播起来之后才重写这段 HTML。开局这一份不带，手机上一进软件
-             「00:00 / 00:00」就顶在那儿，播放台那一行在 320 上直接被撑出去
-             46px（布局套件 W320F3 逮住的）。 -->
+        <!-- 「/ 总长」这半截包在 .dt-total 里。第二十一批第 4 项之前窄屏是靠
+             CSS 把这半截藏掉的（时间那一格只有 36px）；现在时间和喇叭整列
+             挪到了播放台第二行，宽度够，两半都显示。
+             ⚠️ 这层 <span> 留着别拆：onTime() 是整段重写 innerHTML 的，
+                拆了就得连带改那边；而且"藏/显"留个钩子，以后要再收也容易。 -->
         <div class="deck-time" id="deckTime"><b>00:00</b><span class="dt-total"> / 00:00</span></div>
 
         <!-- 音量：平时只有一个喇叭 -->
@@ -2252,6 +2410,26 @@ body.vinyl-wide #lyricBackBtn{display:none}
 <!-- 唱片页 / 台词页。播音频的时候自己盖上来的，点播放台回去。
      播放台会被抬到它上面（body.vinyl-on）—— 用户要的就是"整屏是唱片、播放台浮在上面"。
      音频走不了全屏那一套：#btnFull 对音频是 hidden，fsActive() 也硬要求 playingVideo()。 -->
+<!-- 教程（第二十一批第 10 项）。目录和正文都由 renderGuide() 现填 ——
+     十几个章节的正文写死在 HTML 里太长，而且改一处措辞要翻半天。
+     内容在下面的 GUIDE 那个数组里，一处一份。 -->
+<div id="guidePage" hidden role="dialog" aria-modal="true" aria-label="使用教程">
+  <div class="gd-top">
+    <button class="gd-back" id="guideBack" type="button">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+           stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11.5 5 6.5 10l5 5"/>
+      </svg>返回
+    </button>
+    <div class="gd-title">听雨 · 使用教程</div>
+    <span class="gd-sub" id="guideVer"></span>
+  </div>
+  <div class="gd-body">
+    <nav class="gd-toc" id="guideToc" aria-label="目录"></nav>
+    <div class="gd-doc" id="guideDoc"><div class="gd-inner" id="guideInner"></div></div>
+  </div>
+</div>
+
 <div id="vinyl" hidden role="dialog" aria-label="正在播放">
   <button class="vinyl-close" id="vinylClose" type="button" title="返回 (Esc)" aria-label="返回">
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor"
@@ -2494,15 +2672,34 @@ body.vinyl-wide #lyricBackBtn{display:none}
           <button class="seg-btn" id="segLockPwd" aria-pressed="false">密码</button>
         </div>
       </div>
+      <!-- 忘了密码之后"等多久自动关"（第二十一批第 1 项）。
+           ⚠️ 这个时长**只能在这儿定**，锁屏上不许改 —— 原来是在锁屏上现填的，
+              当场填个 1 小时就等于一键绕过，锁形同虚设。现在锁屏上只问一句
+              "要不要开始倒计时"，用哪个数就是这儿这个数。
+           只在锁开着的时候露出来：没锁的时候压根没有"忘了密码"这回事。 -->
+      <div class="set-sub" id="lockWaitRow" hidden>
+        <span class="set-sublabel" id="setLockWaitLabel">忘了密码后等多久自动关</span>
+        <div class="set-inline">
+          <input class="set-num" id="lockWaitH" type="number" inputmode="numeric" step="1"
+                 min="1" max="720" value="24" aria-labelledby="setLockWaitLabel">
+          <span class="set-inline-unit">小时</span>
+        </div>
+        <p class="set-subnote">这段时间里谁都进得去。到点后软件锁自己关掉，想接着用得回这儿重新设一个。</p>
+      </div>
       <!-- 这段平时是空的，只有 crypto.subtle 用不了的那种环境才由 syncLockUI 填一句 -->
       <p class="set-note" id="lockNote" hidden></p>
     </div>
     <div class="set-row">
       <span class="set-label" id="setWhereLabel">文件位置</span>
       <!-- 按钮上的字和下面那段说明三端各一套，由 syncWhereUI() 填 ——
-           同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。 -->
-      <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
-      <p class="set-note" id="whereNote"></p>
+           同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。
+           「更改」只在电脑端露出来：手机上文件存在应用私有目录里，换到哪儿去
+           都是同一个沙箱；网页端更没得挑。由 syncWhereUI 开合。 -->
+      <div class="set-inline">
+        <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
+        <button class="btn set-where" id="btnSaveDir" hidden>更改</button>
+        <p class="set-note" id="whereNote"></p>
+      </div>
     </div>
     </div>
     <div class="modal-actions"><button class="btn primary" id="setClose">完成</button></div>
@@ -2674,16 +2871,44 @@ function tone(name){
   }
   return toneCache[name];
 }
+/* 窗口 / 系统栏的配色也跟着主题走（第二十一批第 5 项）。
+   电脑端右上角那三颗（最小化 / 最大化 / 关闭）是 Windows 自己画的，网页碰不到，
+   只能走 preload 那条 setChrome 转给主进程的 win.setTitleBarOverlay()。
+   安卓那半在 16.5 才装进 chromeNative —— 那儿要用 CapBars，而它是 let，
+   在这儿直接求值会撞 TDZ（paintTheme 首屏就跑，比 16.5 早得多）。
+   ⚠️ 关灯那张表填的是"清新被蒙完一层"的颜色，跟 theme-color 是同一个道理：
+      窗口框不吃 #dim 那层滤镜，不自己调暗就会比界面亮一截。 */
+let chromeNative = null;
+function applyChrome(t){
+  const c = t === "dark"
+    ? { color: "#131A17", symbol: "#E6EFEB", dark: true  }
+    : t === "off"
+    ? { color: "#8C8C8C", symbol: "#212B28", dark: false }
+    : { color: "#FFFFFF", symbol: "#3D4F49", dark: false };
+  if (window.listra && window.listra.setChrome){
+    try {
+      const r = window.listra.setChrome({ color: c.color, symbolColor: c.symbol, dark: c.dark });
+      if (r && r.catch) r.catch(() => {});
+    } catch (e){}
+  }
+  if (chromeNative) chromeNative(c);
+}
 function paintTheme(v){
   const t = THEMES.includes(v) ? v : "fresh";
   // 关灯用的是**清新那套颜色**，只是外面多蒙一层，所以底色仍按清新挂
-  document.documentElement.dataset.theme = t === "dark" ? "dark" : "fresh";
-  document.body.classList.toggle("lights-off", t === "off");
+  // ⚠️ 两个属性都是挂在 <html> 上的，和 <head> 里那段抢先跑的小脚本写的是同一套
+  //    （第二十一批第 9 项）。那儿是给"第一帧"用的，这儿是给"用户现改"用的，
+  //    两边必须一致 —— 改一处就得改另一处。
+  const de = document.documentElement;
+  de.dataset.theme = t === "dark" ? "dark" : "fresh";
+  if (t === "off") de.dataset.lights = "off";
+  else de.removeAttribute("data-lights");
   toneCache = {};                 // 令牌换过了，画布那份缓存作废
   // 手机上那条状态栏的颜色。关灯底色是"清新被蒙了一层"，
   // 所以填的是蒙完之后的那个值（#F6FAF8 × (1-0.46) ≈ #858886），不然状态栏会比界面亮一截。
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.setAttribute("content", t === "dark" ? "#0B100E" : t === "off" ? "#858886" : "#F6FAF8");
+  applyChrome(t);                 // 窗口框 / 状态栏 / 手势条，同上
   // ⚠️ 这里**不**重画波形。波形是画布画的，换主题确实得重来一趟才换色，
   //    可 drawWave 摸的 wave/canvas 都定义在下面，首屏这次 paintTheme() 跑在它们前面，
   //    调了就是 TDZ 报错。重画那一句放在 setTheme() 里 —— 那条路只可能从设置里走。
@@ -3248,14 +3473,18 @@ function sweepAutoQueues(){
    ============================================================ */
 function probeDuration(m){
   return new Promise(res => {
+    const got = mediaSrc(m);
+    if (!got.src){ res(0); return; }
     const el = document.createElement(m.kind === "audio" ? "audio" : "video");
     el.preload = "metadata";
-    const url = URL.createObjectURL(m.file);
-    const done = v => { URL.revokeObjectURL(url); el.removeAttribute("src"); res(v); };
+    const done = v => {
+      if (got.owned) URL.revokeObjectURL(got.src);
+      el.removeAttribute("src"); res(v);
+    };
     el.onloadedmetadata = () => done(isFinite(el.duration) ? el.duration : 0);
     el.onerror = () => done(0);
     setTimeout(() => done(isFinite(el.duration) ? el.duration : 0), 8000);
-    el.src = url;
+    el.src = got.src;
   });
 }
 
@@ -3320,13 +3549,15 @@ function grabFrame(m, el){
    不取 0 秒 —— 很多片子第一帧是纯黑，卡片上就是一块黑砖，往里头挪一点点。 */
 function seedFrameCover(m){
   return new Promise(res => {
+    const got = mediaSrc(m);
+    if (!got.src){ res(); return; }
     const el = document.createElement("video");
     el.muted = true; el.preload = "metadata";
-    const url = URL.createObjectURL(m.file);
     let done = false;
     const fin = () => {
       if (done) return; done = true;
-      URL.revokeObjectURL(url); el.removeAttribute("src"); el.load(); res();
+      if (got.owned) URL.revokeObjectURL(got.src);
+      el.removeAttribute("src"); el.load(); res();
     };
     el.onerror = fin;
     el.onloadedmetadata = () => {
@@ -3350,7 +3581,7 @@ function seedFrameCover(m){
       }, "image/jpeg", 0.82);
     };
     setTimeout(fin, 8000);
-    el.src = url;
+    el.src = got.src;
   });
 }
 
@@ -3499,7 +3730,13 @@ async function addFiles(files, { silent = false } = {}){
     if (prev){
       // 上次留下的记录还是"离线"的，这次重新授权把文件挂回去 —— 改过的名字、
       // 时长、标签都保住，不用当新文件重来一遍。
-      if (prev.offline){ prev.file = f; prev.offline = false; reviving.push(prev); }
+      if (prev.offline){
+        prev.file = f; prev.offline = false;
+        // 电脑端：上次那条路径可能已经失效（文件被挪走了才会变回离线），
+        // 清掉让它照这一份重走一遍 adopt —— 留着旧的会原地绕回死链。
+        prev.path = ""; prev.url = ""; prev.owned = false; prev.stored = false;
+        reviving.push(prev);
+      }
       else dupes++;
       continue;
     }
@@ -3574,9 +3811,40 @@ let storageWarned = false;
 async function hydrateMetas(items){
   // 一整批按同一档走。中途去设置里改了，也不该同一批里两种待遇。
   const indexOnly = INDEX_MODE();
+
+  /* 电脑端先把路径问出来，一整批一回问。主进程那边收的是
+     [{id, path, copy}]，copy 为真就是"搬进保存位置"，为假是"就地引用"。
+     ⚠️ 失败一律当没这条路：拿不到路径就老老实实退回存整份 ——
+        宁可多占一份空间，也不能让文件既没路径又没本体，变成点了没反应的死条。 */
+  const pathOf = new Map();
+  if (adoptable()){
+    const ask = [];
+    for (const m of items){
+      if (m.path || !isBlob(m.file)) continue;
+      let p = "";
+      try { p = shellBridge.pathFor(m.file) || ""; } catch (e){ p = ""; }
+      // name 是给主进程起文件名用的 —— 它拿不到 File，只有这一条路把名字带过去
+      if (p) ask.push({ id: m.id, path: p, copy: !indexOnly, name: m.name });
+    }
+    if (ask.length){
+      try{
+        const r = await shellBridge.adopt(ask);
+        if (r && r.ok && Array.isArray(r.list))
+          for (const x of r.list) if (x && x.id && x.path) pathOf.set(x.id, x);
+      }catch(e){}
+    }
+  }
+
   for (const m of items){
     try{
-      if (m.file && !m.stored && !indexOnly){
+      const rec = pathOf.get(m.id);
+      if (rec){
+        // 有真实文件了：「存本体」这件事就算落了地，不再往库里写一份。
+        m.path = rec.path;
+        m.owned = !!rec.owned;         // 是我们搬进来的才归我们删，就地引用的绝不碰
+        m.url = pathToUrl(rec.path);
+        m.stored = true;
+      } else if (m.file && !m.stored && !indexOnly){
         // 存的就是 File 本身。name/size/lastModified 一并存住，下次启动才能按
         // stableId 把它和索引里的那条记录对上号。
         DB.set("files", m.id, m.file).then(ok => {
@@ -3590,14 +3858,21 @@ async function hydrateMetas(items){
       // 还没进过库的按这一档打标。"只建索引"是用户选的，不是存失败 ——
       // 重启后得靠它把「索引」和「没能存进去」两种口气分开。
       if (!m.stored) m.indexed = indexOnly;
+      // 下面全是要"读字节"的活儿 —— 手上没有本体就跳过。
+      // 路径条目在导入这一刻本体还在手里，照读不误；只有从库里恢复回来那种
+      // 才走到这儿（那时候读取会在 restoreLibrary 里按需补）。
+      if (!isBlob(m.file)){ renderAll(); continue; }
       m.tags = await readTags(m.file);
       refreshCover(m);
+      // 内嵌封面顺手缓存一份小的。电脑端重启之后 m.tags.cover 是没了，
+      // 但封面图本身只有几十 KB —— 缓存它不算"存整份"，却能救回满屏的封面。
+      if (isBlob(m.tags.cover)) DB.set("files", frameKey(m.id), m.tags.cover);
       m.duration = await probeDuration(m);
       // 视频没内嵌封面的话，先把上次存下的帧封面捞回来，**一次都没有才去抓第一帧**。
       // "有就不抓"很要紧：不然每次重挂文件都会把用户看过的"退出帧"冲回第一帧。
       if (m.kind === "video" && !m.tags.cover && !m.frameCover){
         const saved = await DB.get("files", frameKey(m.id));
-        if (saved instanceof Blob){ m.frameCover = saved; refreshCover(m); }
+        if (isBlob(saved)){ m.frameCover = saved; refreshCover(m); }
         else await seedFrameCover(m);
       }
     }catch{ /* 单个文件失败不该拖垮整批 */ }
@@ -3626,6 +3901,9 @@ async function saveLibrary(){
     // 这条当初是"只建索引"进来的。重启后它天然就是离线的，得跟"存失败了"
     // 区分开 —— 前者是用户选的，不该弹"没能存进软件里"那种出错口气。
     indexed: !!m.indexed,
+    // 电脑端：真实文件在磁盘上的位置，和"这份是不是我们搬进来的"。
+    // owned 为假的是「就地引用原文件」那条路 —— 删条目时**不许**动它。
+    path: m.path || "", owned: !!m.owned,
   })));
   // 排序和钉住都存在每一列自己身上，所以这两份投影各自带着走
   await DB.set("meta", "collections", store.collections.map(c => ({
@@ -3685,8 +3963,32 @@ async function restoreLibrary(){
                   marks:Array.isArray(r.marks) ? r.marks : [],
                   clips:Array.isArray(r.clips) ? r.clips : [],
                   lyrics:r.lyrics || "",
-                  pos:+r.pos || 0 };
+                  pos:+r.pos || 0,
+                  // 电脑端那条路：文件留在磁盘上，索引里记的是它在哪儿
+                  path: typeof r.path === "string" ? r.path : "",
+                  owned: r.owned === true,
+                  url: "" };
       store.items.push(m); store.byId.set(m.id, m);
+    }
+  }
+
+  /* 电脑端先走一趟"重新登记 + 点个名"（第 6 项）。
+     ⚠️ 主进程那份已知文件名单是内存里的，关一次软件就空了。不补这一趟，
+        「在文件夹中显示」和「删除」在重启后对所有条目都会失灵。
+     顺便这一趟就把文件还在不在验了 —— 被移走、被删掉的当场认出来。 */
+  if (adoptable() && typeof shellBridge.remember === "function"){
+    const ask = store.items.filter(m => m.path).map(m => ({ id:m.id, path:m.path, owned:m.owned }));
+    if (ask.length){
+      try{
+        const r = await shellBridge.remember(ask);
+        for (const x of (Array.isArray(r) ? r : [])){
+          const m = store.byId.get(x && x.id);
+          if (!m) continue;
+          // 文件不在了就保持离线 —— 别揣着一个死链当能播的
+          if (x.ok){ m.url = pathToUrl(m.path); m.offline = false; m.indexed = false; }
+          else m.offline = true;
+        }
+      }catch(e){}
     }
   }
 
@@ -3696,16 +3998,19 @@ async function restoreLibrary(){
   for (const m of store.items){
     if (!m.offline) continue;
     if (m.indexed) continue;      // 当初就没存本体，别去库里白翻一趟
+    if (m.path) continue;         // 电脑端：上面那一趟已经判过了，库里本来就没有它的份
     const blob = await DB.get("files", m.id);
-    if (blob instanceof Blob){ m.file = blob; m.offline = false; m.stored = true; revived.push(m); }
+    if (isBlob(blob)){ m.file = blob; m.offline = false; m.stored = true; revived.push(m); }
   }
 
-  // 帧封面也接回来 —— 它不在 saveLibrary 那份投影里，得单独捞一趟，
-  // 不然重启之后视频卡片全退回通用图标，用户会以为白看了。
+  /* 封面也接回来 —— 它不在 saveLibrary 那份投影里，得单独捞一趟，
+     不然重启之后满屏卡片全退回通用图标，用户会以为白看了。
+     原来是只管视频（那时只有视频有帧封面）；现在内嵌封面也缓存在同一个键上，
+     所以音频一并捞 —— 手机/网页端还是整份存着，本来也不缺这一趟。 */
   for (const m of store.items){
-    if (m.kind !== "video" || m.coverUrl) continue;
+    if (m.coverUrl) continue;
     const blob = await DB.get("files", frameKey(m.id));
-    if (blob instanceof Blob){ m.frameCover = blob; refreshCover(m); }
+    if (isBlob(blob)){ m.frameCover = blob; refreshCover(m); }
   }
   const st = await DB.get("meta", "settings");
   if (st){
@@ -4572,9 +4877,10 @@ const elFor = m => m.kind === "video" ? videoEl : audioEl;
 // 循环次数和定量都只在人点进来的时候从头数（见下面那句 if (!auto)）。
 function load(m, { autoplay = true, auto = false, restore = false } = {}){
   if (!m) return;
-  if (!m.file){
+  if (!playable(m)){
     // 「只建索引」进来的，重开之后本来就没有本体 —— 这不是出错，得给条能走的路
-    toast(m.indexed ? "这是索引条目，点「添加文件」里的「选文件夹」或把文件再拖进来就能播"
+    toast(m.path ? "这个文件找不到了，它可能被移走或删掉了。把文件放回原处，或者重新添加一次"
+        : m.indexed ? "这是索引条目，点「添加文件」里的「选文件夹」或把文件再拖进来就能播"
                     : "这个文件还没存进软件里，重新添加一次就能播");
     return;
   }
@@ -4594,11 +4900,14 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
   // 临时待播：这一条真的开播了才记一笔（autoplay:false 那种"载入但不播"不算）
   if (autoplay) markTempDone(m);
 
+  /* 电脑端喂的是 file:// 直读那条 —— 不占内存、不建副本，原文件挪了才失效；
+     其余端还是把库里那份 blob 造个网址出来。objectUrl 这个全局只装"我们造的"，
+     file:// 那条不归它管，别把网址 revoke 掉了。 */
   if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
-  objectUrl = URL.createObjectURL(m.file);
+  if (!m.url) objectUrl = URL.createObjectURL(m.file);
   // 要在 el.src 之前摆好 —— loadedmetadata 一到 applyResume 就会把它取走。
   if (restore) resumeQuiet = true;
-  el.src = objectUrl;
+  el.src = m.url || objectUrl;
   el.volume = volume;
   el.muted  = muted;
   el.playbackRate = rules.rate;          // 换一首也接着用这个速度
@@ -4904,7 +5213,7 @@ function setPlaying(p){
     // 真的放起来了才算听了一回。旗子在 load() 里放平，所以"暂停再播"还是
     // 同一次，而"换一首再回来"是新的一次。
     const m = player.current;
-    if (m && m.file && !m._counted){
+    if (m && playable(m) && !m._counted){
       m._counted = true;
       m.plays = (m.plays || 0) + 1;
       bumpHistory(m.id, "n", 1);      // 榜单要按天算次数，所以除了总数还得记一笔今天
@@ -4934,7 +5243,7 @@ let playedLast = 0;
 let statsDirty = false;
 function tickPlayed(){
   const m = player.current;
-  if (!m || !m.file) return;
+  if (!playable(m)) return;
   const t = activeEl.currentTime;
   if (!isFinite(t)) return;
   if (activeEl.paused){ playedLast = t; return; }
@@ -5297,7 +5606,7 @@ markPanel.addEventListener("click", e => {
   const m = player.current;
   if (!m) return;
   const marks = marksOf(m), clips = clipsOf(m);
-  const jump = t => { if (!m.file) return toast("这个文件还没存进软件里"); activeEl.currentTime = t; if (activeEl.paused) activeEl.play().catch(()=>{}); };
+  const jump = t => { if (!playable(m)) return toast("这个文件还没存进软件里"); activeEl.currentTime = t; if (activeEl.paused) activeEl.play().catch(()=>{}); };
 
   if (e.target.closest("#mkAdd")){
     const t = activeEl.currentTime;
@@ -5487,10 +5796,37 @@ function cfOkSkin(danger){
   $("cfOk").classList.toggle("danger",  !!danger);
   $("cfOk").classList.toggle("primary", !danger);
 }
-function askConfirm(title, text, okLabel, onOk){
+/* 「从资料库移除」的确认键要摁住 5 秒才给按（第二十一批第 6 项）。
+   它现在会**连磁盘上的真实文件一起删**，比原来只删软件里那份重得多 ——
+   手快连点两下就没了，而这是全项目唯一一个删掉就找不回来的操作。
+   ⚠️ 是 disabled 不是"点了没反应"：禁用态系统不给发 click，也就没法误触。 */
+const CF_HOLD_SEC = 5;
+let cfHoldTimer = 0;
+function armConfirmHold(sec, label){
+  clearInterval(cfHoldTimer); cfHoldTimer = 0;
+  const btn = $("cfOk");
+  if (!sec){ btn.disabled = false; btn.textContent = label; return; }
+  let left = sec;
+  const paint = () => { btn.textContent = `${label}（${left} 秒）`; };
+  btn.disabled = true; paint();
+  cfHoldTimer = setInterval(() => {
+    left--;
+    if (left <= 0){
+      clearInterval(cfHoldTimer); cfHoldTimer = 0;
+      btn.disabled = false; btn.textContent = label;
+      return;
+    }
+    paint();
+  }, 1000);
+}
+function askConfirm(title, text, okLabel, onOk, holdSec){
   $("cfTitle").textContent = title;
   $("cfText").textContent  = text;
   $("cfOk").textContent    = okLabel || "删除";
+  // 取消那颗的字有人会当场改（搬完文件之后它问的是"要不要删"，取消=留着）。
+  // 每次开框先写回默认，免得串到"退出软件"那种框上去。
+  $("cfCancel").textContent = "取消";
+  armConfirmHold(holdSec || 0, okLabel || "删除");
   // 破坏性操作才穿珊瑚色（原来只有「移除/删除」）。「退出软件」那颗
   // 在 askExit 里当场换成薄荷，所以每开一次都得先穿回默认那件。
   cfOkSkin(true);
@@ -5500,9 +5836,20 @@ function askConfirm(title, text, okLabel, onOk){
   $("confirmModal").hidden = false;
   pendingConfirm = onOk;
 }
-function closeConfirm(){ $("confirmModal").hidden = true; pendingConfirm = null; }
+function closeConfirm(){
+  // 倒计时得收掉 —— 留着的话下一个确认框（比如「退出软件」）一开出来
+  // 就会带着上一个的秒数往下走，而且那颗键还是禁用的。
+  clearInterval(cfHoldTimer); cfHoldTimer = 0;
+  $("cfOk").disabled = false;
+  $("confirmModal").hidden = true; pendingConfirm = null;
+}
 $("cfCancel").addEventListener("click", closeConfirm);
-$("cfOk").addEventListener("click", () => { const fn = pendingConfirm; closeConfirm(); fn?.(); });
+/* ⚠️ 光靠 disabled 拦不住：`dispatchEvent` 造出来的点击照样会把监听器跑一遍
+   （disabled 只挡"用户真的去点"这一条路）。倒计时没走完就当没点。 */
+$("cfOk").addEventListener("click", () => {
+  if ($("cfOk").disabled) return;
+  const fn = pendingConfirm; closeConfirm(); fn?.();
+});
 $("confirmModal").addEventListener("pointerdown", e => { if (e.target === $("confirmModal")){ ateClick(); closeConfirm(); } });
 
 /* ============================================================
@@ -5765,7 +6112,10 @@ async function loadWaveform(m){
   if (cached && cached.length === BUCKETS){ wave.peaks = Float32Array.from(cached); drawWave(); return; }
 
   try{
-    const buf = await m.file.arrayBuffer();
+    // 电脑端的路径条目手上没有 Blob —— 按网址取回来。这边上面那道 tooBigToDecode
+    // 已经把它挡在 60MB / 一定时长以内了，整份读进来是安全的。
+    const buf = m.file ? await m.file.arrayBuffer()
+                       : await (await fetch(m.url)).arrayBuffer();
     const audio = await audioCtx().decodeAudioData(buf);
     const ch = audio.getChannelData(0);
     const step = Math.max(1, Math.floor(ch.length / BUCKETS));
@@ -5874,8 +6224,10 @@ function setPeekSource(m){
   if (peekUrl){ URL.revokeObjectURL(peekUrl); peekUrl = null; }
   peekEl.removeAttribute("src");
   if (!m) return;
-  peekUrl = URL.createObjectURL(m.file);
-  peekEl.src = peekUrl;
+  const got = mediaSrc(m);
+  if (!got.src) return;
+  if (got.owned) peekUrl = got.src;      // 只有我们自己造的才记着，回头要 revoke
+  peekEl.src = got.src;
 }
 
 peekEl.addEventListener("seeked", () => {
@@ -7015,17 +7367,26 @@ function fmtPlayed(m){
   return `听了 ${n} 遍 · 累计 ${dur}`;
 }
 
-// 只从资料库里移除，磁盘上的文件一个字节都不动。
-// 先问一句 —— 这个动作没有撤销，而且顺手会把存在软件里的那一份删掉。
+/* 从资料库移除。**电脑端会连磁盘上的真实文件一起删**（第二十一批第 6 项）——
+   因为从这一版起，电脑端"存在软件里"的就是那个真实文件本身，没有第二份副本
+   可以删。自己拖进来就地引用的那些（owned 为假）照旧一个字节都不碰：
+   那是用户自己的文件，我们没搬过它，也就没资格删它。
+   ⚠️ 正因为变得这么重，确认键要摁住 5 秒（armConfirmHold）才给按。 */
 function removeItems(list){
   if (!list.length) return;
   const one = list.length === 1;
+  const mine  = list.filter(m => m.owned && m.path).length;      // 我们搬进来的
+  const ref   = list.filter(m => !m.owned && m.path).length;     // 就地引用的原文件
+  const inner = list.length - mine - ref;                        // 存在软件里的整份
+  const N = n => (one ? "" : `${n} 个`);
+  const say = [];
+  if (mine)  say.push(`搬进「保存位置」的${N(mine)}文件会一并从磁盘上删掉`);
+  if (inner) say.push(`存在软件里的那${one ? "一份" : N(inner) + "份"}会一起删掉`);
+  if (ref)   say.push(`原来的文件在哪儿还在哪儿，一个字节都不动`);
+  const tail = (say.length ? say.join("；") : "磁盘上的文件一个字节不动") + "。这个动作没法撤销。";
   askConfirm(one ? "从资料库移除" : `从资料库移除 ${list.length} 项`,
-    one ? `「${titleOf(list[0])}」会从资料库消失。磁盘上的文件一个字节不动，`
-        + `但存在软件里的那一份会一起删掉，这个动作没法撤销。`
-        : `这 ${list.length} 项都会从资料库消失。磁盘上的文件一个字节不动，`
-        + `但存在软件里的那几份会一起删掉，这个动作没法撤销。`,
-    "移除", () => reallyRemoveItems(list));
+    (one ? `「${titleOf(list[0])}」会从资料库消失。` : `这 ${list.length} 项都会从资料库消失。`) + tail,
+    "移除", () => reallyRemoveItems(list), CF_HOLD_SEC);
 }
 function reallyRemoveItems(list){
   if (!list.length) return;
@@ -7061,6 +7422,18 @@ function reallyRemoveItems(list){
   // 帧封面是同一条记录带出来的衍生物，一起清 —— 只删本体的话，
   // 同一个文件再导进来命中同一个 id，卡片会显示上一次的那一帧。
   ids.forEach(id => { DB.del("files", id); DB.del("files", frameKey(id)); });
+  /* 电脑端：搬进「保存位置」的那份真实文件也一并删掉（第 6 项口径："直接连文件一起删"）。
+     ⚠️ 只删 owned 的那些。就地引用的一律不碰 —— 那是用户自己的文件，我们只是
+        记了个位置，没资格删。主进程那边还会再对一遍白名单，这里只是发起。 */
+  if (adoptable() && typeof shellBridge.dropFile === "function"){
+    for (const m of list){
+      if (!m.owned || !m.path) continue;
+      try {
+        const r = shellBridge.dropFile(m.path);
+        if (r && r.catch) r.catch(() => {});
+      } catch (e){}
+    }
+  }
   for (const c of store.collections) c.ids = c.ids.filter(id => !ids.has(id));
   for (const q of store.queues)      q.ids = q.ids.filter(id => !ids.has(id));
 
@@ -7186,7 +7559,27 @@ for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).addEventListener("click", () => setNo
 const LOCK_KEY = "tingyu.lock";
 const LOCK_ITER = 120000;          // PBKDF2 轮数：桌面上约 0.1 秒，手机上半秒以内
 const LOCK_MIN = 4;                // 九宫格最少连几个点
+const LOCK_WAIT_DEF = 24;          // 「忘了密码后等多久自动关」的出厂值（小时）
+const LOCK_WAIT_MIN = 1;           // 小时。再短就等于没锁，所以垫一个下限
+const LOCK_WAIT_MAX = 720;         // 小时（一个月）。再多不如干脆清数据重来
 const PAD_C = [15, 50, 85];        // 九个点的圆心（百分比），SVG 那边是同一套数
+
+/* 时长的闸。**读回来和填进去都要过这儿** —— 那条记录躺在 localStorage 里，
+   手改一下把 waitH 改成 0，就等于"点一下立刻解锁"，锁又白设了。
+   传进来的东西是 NaN（老记录里没这个字段）就退回出厂值。 */
+function clampWaitH(v){
+  const h = Math.round(Number(v));
+  if (!isFinite(h)) return LOCK_WAIT_DEF;
+  if (h < LOCK_WAIT_MIN) return LOCK_WAIT_MIN;
+  if (h > LOCK_WAIT_MAX) return LOCK_WAIT_MAX;
+  return h;
+}
+/* 倒计时的读数 hh:mm:ss。最多 720 小时，三位数也装得下。 */
+function lockHMS(ms){
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const p = n => String(n).padStart(2, "0");
+  return p(Math.floor(s / 3600)) + ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60);
+}
 
 // localStorage 在个别隐私模式下会直接抛，所以整条路都裹上。
 function lsGet(k){ try{ return localStorage.getItem(k); }catch{ return null; } }
@@ -7194,12 +7587,14 @@ function lsSet(k, v){ try{ localStorage.setItem(k, v); return true; }catch{ retu
 function lsDel(k){ try{ localStorage.removeItem(k); }catch{} }
 
 /* 锁的状态。salt/hash 只在要验证的时候用得上；界面只关心 on 和 mode。
-   until：忘了密码时定下的"等够这么久就自动关"（毫秒时间戳，0 = 没定）。
-   ---- 第二十批第 8 项。没有服务器、也没有"找回密码"，那忘了密码就是死路一条；
-        现在给一条**只能等**的路：在锁屏上定一个钟点，到点了软件锁自己卸掉。
-        这条路不需要密码 —— 要密码就不叫忘了密码了，所以它天生是"拖延"而不是"验证"，
-        底线靠两条守住：最短 1 小时，以及已经等着的那一把只许往短里改（见 lockArmWait）。 */
-let lock = { on:false, mode:"pattern", salt:"", hash:"", until:0 };
+   until：倒计时定下的"等够这么久就自动关"（毫秒时间戳，0 = 没定）。
+   waitH：倒计时要走多久（小时）。**这个数只能在设置里定**。
+   ---- 第二十批第 8 项给了忘了密码一条**只能等**的路；第二十一批第 1 项把
+        "等多久"从锁屏挪进了设置 —— 原来是在锁屏上现填的，当场填个 1 小时
+        就等于一键绕过，锁形同虚设。现在锁屏上只问一句"要不要开始倒计时"，
+        用的就是 waitH。这条路不需要密码（要密码就不叫忘了密码了），
+        所以它天生是"拖延"而不是"验证"，底线靠"时长由设置定 + 最短 1 小时"守住。 */
+let lock = { on:false, mode:"pattern", salt:"", hash:"", until:0, waitH: LOCK_WAIT_DEF };
 let lockTimer = 0;
 let lockExpired = false;         // 这次开机是不是"等着等着到点了"
 
@@ -7212,23 +7607,29 @@ function lockLeftHours(){
 /* 到点了：整个卸掉。清了就真没了 —— 下次打开不再拦人，
    得自己去设置里重新设一遍（用户口径里就是这么说的）。 */
 function lockExpire(){
-  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0 };
+  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0, waitH: lock.waitH };
   lsDel(LOCK_KEY);
   lockExpired = true;
   syncLockUI();
 }
-/* 边跑边盯着。锁屏开着的时候人可能就坐在那儿等，到点了要当场放行，
-   不能等到下一次重开软件。没定钟点、或者锁已经关了，就什么都不做。 */
+/* 边跑边盯着。锁屏开着的时候人可能就坐在那儿盯着倒计时，到点了要当场放行，
+   不能等到下一次重开软件。没定钟点、或者锁已经关了，就什么都不做。
+   ---- 节拍分两档：锁屏**开着**的时候 1 秒一跳（那行 hh:mm:ss 得真的在走），
+        平时 20 秒看一眼就够。showLock / lockUnlocked 两头都会重新调一次，
+        所以开关锁屏会当场把节拍换过来。 */
 function armLockTimer(){
   clearInterval(lockTimer); lockTimer = 0;
   if (!lock.on || !lock.until) return;
   lockTimer = setInterval(() => {
-    if (Date.now() < lock.until) return;
-    clearInterval(lockTimer); lockTimer = 0;
-    lockExpire();
-    lockUnlocked();
-    toast("软件锁到点关了。想接着用就在设置里重新设一个");
-  }, 20000);
+    if (Date.now() >= lock.until){
+      clearInterval(lockTimer); lockTimer = 0;
+      lockExpire();
+      lockUnlocked();
+      toast("软件锁到点关了。想接着用就在设置里重新设一个");
+      return;
+    }
+    if (lockUp()) paintLockLeft();
+  }, lockUp() ? 1000 : 20000);
 }
 
 function lockLoad(){
@@ -7240,7 +7641,8 @@ function lockLoad(){
       lock = { on:true,
                mode: o.mode === "password" ? "password" : "pattern",
                salt: String(o.salt), hash: String(o.hash),
-               until: Number(o.until) || 0 };
+               until: Number(o.until) || 0,
+               waitH: clampWaitH(o.waitH) };
     }
   }catch{}                       // 读坏了当没锁 —— 总比把用户关在外面强
   // 关着软件的那段时间也算数：重开时一看已经过点了，直接不锁
@@ -7249,7 +7651,8 @@ function lockLoad(){
 function lockSave(){
   if (!lock.on){ lsDel(LOCK_KEY); return true; }
   return lsSet(LOCK_KEY, JSON.stringify({ on:true, mode:lock.mode,
-                                          salt:lock.salt, hash:lock.hash, until:lock.until || 0 }));
+                                          salt:lock.salt, hash:lock.hash,
+                                          until:lock.until || 0, waitH: lock.waitH }));
 }
 
 async function lockDigest(text, salt){
@@ -7298,7 +7701,7 @@ function bindPad(root, done){
     const r = root.getBoundingClientRect();
     return { x:(e.clientX - r.left) / r.width * 100, y:(e.clientY - r.top) / r.height * 100 };
   };
-  // 最近的一个点，超过 14% 就当没够着 —— 九宫格的点本身才 15px 宽，
+  // 最近的一个点，超过 14% 就当没够着 —— 九宫格的点本身才 20px 宽，
   // 不给人留余量的话手指根本连不上。
   const hit = p => {
     let best = -1, bd = 1e9;
@@ -7354,26 +7757,56 @@ function lockShake(){
    所以文案要把话说死：等待期间谁都进得去，没有第二条路。 */
 const lockForgotHTML = () => `<button class="lock-forgot" id="lockForgot" type="button">忘了密码？</button>`;
 
-const LOCK_WAIT_MIN = 1;      // 小时。再短就等于没锁，所以垫一个下限
-const LOCK_WAIT_MAX = 720;    // 小时（一个月）。再多不如干脆清数据重来
+/* 锁屏上那行倒计时。元素**只在锁屏这一屏里**，别的屏（设置、等待面板）上没有；
+   有元素就往上写，没有就当没这回事。
+   ---- 第二十一批第 1 项：倒计时得让人看得见，而且要真的在走 ——
+        不然"怎么还不解锁"没有任何地方能回答。1 秒一跳由 armLockTimer 供着。 */
+function paintLockLeft(){
+  const el = $("lockLeft");
+  if (!el) return;
+  const ms = lock.on && lock.until ? lock.until - Date.now() : 0;
+  if (ms <= 0){ el.hidden = true; el.textContent = ""; return; }
+  el.hidden = false;
+  el.innerHTML = `距软件锁自动关掉还有 <b>${lockHMS(ms)}</b>`;
+}
 
 function showLock(){
   lockTries = 0;
   const pw = lock.mode === "password";
-  lockHint(pw ? "输入密码解锁" : "连点至少 " + LOCK_MIN + " 个点解锁", false);
+  lockHint(pw ? "输入密码，输对了直接就进来了" : "连点至少 " + LOCK_MIN + " 个点解锁", false);
+  // 倒计时排在输入区**下面**（第二十一批第 1 项的原话），忘了密码那颗在最底下。
   $("lockBody").innerHTML = (pw
     ? `<div class="lock-pwd">
          <input id="lockPwdIn" type="password" autocomplete="off" inputmode="text"
                 aria-label="密码" placeholder="密码">
-         <button class="btn primary" id="lockGo">解锁</button>
        </div>`
-    : padHTML("lockPad")) + lockForgotHTML();
+    : padHTML("lockPad")) + `<p class="lock-left" id="lockLeft" hidden></p>` + lockForgotHTML();
   if (pw){
-    $("lockGo").addEventListener("click", () => lockTryPwd($("lockPwdIn").value));
-    $("lockPwdIn").addEventListener("keydown", e => {
-      if (e.key === "Enter"){ e.preventDefault(); lockTryPwd($("lockPwdIn").value); }
+    /* 第二十一批第 3 项：输对了当场解锁，「解锁」那颗键没有了。
+       ---- ⚠️ 边打边验，每验一次就是一次 PBKDF2（桌面约 0.1 秒、手机半秒以内），
+            所以要两道闸：
+            ① 攒 120 毫秒再算，手快的人不会一个字发一次；
+            ② 世代号 —— 算完回来发现输入的次数已经变了，那一发**作废**。
+               少了②的话，"删掉一个字"之后那个迟到的"对"还是会把人放进去。 */
+    const inp = $("lockPwdIn");
+    let seq = 0, deb = 0;
+    const peek = () => {
+      const mine = ++seq;
+      const v = inp.value;
+      if (!v) return;
+      lockPeek(v).then(ok => { if (ok && mine === seq) lockUnlocked(); });
+    };
+    inp.addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(peek, 120); });
+    inp.addEventListener("keydown", e => {
+      // 回车 = "我打完了"。上面那条路是闷声不响的（打错了什么都不做），
+      // 得留一个地方把"不对"说出来。
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      clearTimeout(deb);
+      seq++;                       // 作废飞在半路的那一发，免得它跟下面这发抢着报错
+      lockTryPwd(inp.value);
     });
-    setTimeout(() => { try{ $("lockPwdIn").focus(); }catch{} }, 60);
+    setTimeout(() => { try{ inp.focus(); }catch{} }, 60);
   } else {
     bindPad($("lockPad"), seq => {
       if (seq.length < LOCK_MIN){ lockHint("至少连 " + LOCK_MIN + " 个点", true); return; }
@@ -7382,54 +7815,57 @@ function showLock(){
   }
   $("lockForgot").addEventListener("click", lockForgetPanel);
   $("lockScreen").hidden = false;
+  paintLockLeft();
+  armLockTimer();                // 锁屏一露头就把节拍换成 1 秒
 }
 
-/* 定钟点的那一屏。已经有一把在等着的话，预填和上限都跟着它走 ——
-   已经等掉的时间不能被"重新定一次"抹掉（见 lockArmWait）。 */
+/* 「忘了密码？」那一屏。**这一屏定不了时长** —— 时长的家在设置里。
+   ---- 第二十批第 8 项原来是在这儿现填几个小时的，那是自己给自己开口子：
+        当场填个 1 小时就等于一键绕过，锁形同虚设。第二十一批第 1 项把它挪进
+        设置，这儿只剩一句"要不要开始"。用时长的数就是设置里那个，改不了。
+   ---- 已经在走的时候**连"再来一次"都不给**：能重来一次就等于能无限往后拖。
+        只剩"回去输密码"一条路（用户口径：开始倒计时后也能选择退出去输密码）。 */
 function lockForgetPanel(){
   const left = lockLeftHours();
+  // ⚠️ 现夹一遍再写进界面。lock 这个对象在好几处是**整个换掉**的
+  //    （lockLoad / lockExpire / setLockOn），漏带一次 waitH 就是 undefined，
+  //    界面上会写出"从现在起等 undefined 小时"。兜一层比指望每处都记得便宜。
+  lock.waitH = clampWaitH(lock.waitH);
+  if (left){
+    lockHint("倒计时已经在走了，等着就行", false);
+    $("lockBody").innerHTML = `
+      <div class="lock-wait">
+        <p class="lock-wait-note" id="lockLeft"></p>
+        <p class="lock-wait-note">这段时间里谁都进得去。到点后软件锁自己关掉，想接着用得去设置里重新设一个。</p>
+        <div class="lock-wait-btns">
+          <button class="btn primary" id="lockWaitBack" type="button">回去输密码</button>
+        </div>
+      </div>`;
+    paintLockLeft();
+    $("lockWaitBack").addEventListener("click", showLock);
+    return;
+  }
   lockHint("没有别的路了，只能等 —— 等够了软件锁自己关掉", false);
   $("lockBody").innerHTML = `
     <div class="lock-wait">
-      <div class="lock-wait-row">
-        <span>等</span>
-        <input id="lockWaitIn" type="number" inputmode="numeric" step="1"
-               min="${LOCK_WAIT_MIN}" max="${left || LOCK_WAIT_MAX}"
-               value="${left || 24}" aria-label="等多少小时">
-        <span>小时</span>
-      </div>
-      <p class="lock-wait-note" id="lockWaitNote">这段时间里谁都进得去。到点后软件锁自己关掉，想接着用得去设置里重新设一个。</p>
+      <p class="lock-wait-note">从现在起等 <b>${lock.waitH} 小时</b>，软件锁会自己关掉。</p>
+      <p class="lock-wait-note">这个时长是在<b>设置</b>里定好的，这儿改不了。这段时间里谁都进得去，想反悔就趁现在。</p>
       <div class="lock-wait-btns">
-        <button class="btn" id="lockWaitBack" type="button">再想想</button>
-        <button class="btn primary" id="lockWaitGo" type="button">就这么定</button>
+        <button class="btn" id="lockWaitBack" type="button">回去输密码</button>
+        <button class="btn primary" id="lockWaitGo" type="button">开始倒计时</button>
       </div>
     </div>`;
   $("lockWaitBack").addEventListener("click", showLock);
-  $("lockWaitGo").addEventListener("click", lockArmWait);
+  $("lockWaitGo").addEventListener("click", lockStartWait);
 }
-function lockArmWait(){
-  const el = $("lockWaitIn"), note = $("lockWaitNote");
-  let h = Math.round(Number(el && el.value));
-  if (!isFinite(h) || !h) h = 0;
-  if (h < LOCK_WAIT_MIN || h > LOCK_WAIT_MAX){
-    note.textContent = `只能是 ${LOCK_WAIT_MIN} 到 ${LOCK_WAIT_MAX} 小时。`;
-    return;
-  }
-  /* ⚠️ 已经有一把在等着的话，只许往**早**里改。
-     不然"定一小时 → 到点前再定一小时"就能无限往后拖，等于一键绕过。
-     ⚠️ 比的是**两个钟点**，不是两个"几小时"：剩余不足一小时时 lockLeftHours()
-        向上取整会报 1，而 1 又正好等于下限 —— 拿小时数当闸，"1 小时"这一档
-        永远过得去，等于没闸。 */
-  const deadline = Date.now() + h * 3600e3;
-  if (lock.until && deadline > lock.until){
-    note.textContent = "已经等着的那一把不能往后拖 —— 最早也只能定在它原来那个钟点。";
-    return;
-  }
-  lock.until = deadline;
-  if (!lockSave()){ note.textContent = "这个环境存不下，定不了。"; return; }
-  armLockTimer();
-  showLock();
-  lockHint(`定在 ${h} 小时后自动关掉软件锁`, false);
+function lockStartWait(){
+  if (!lock.on) return;
+  if (lock.until && Date.now() < lock.until) return;   // 已经在走，不许再点
+  lock.waitH = clampWaitH(lock.waitH);                 // 同上，兜一层
+  lock.until = Date.now() + lock.waitH * 3600e3;
+  if (!lockSave()){ lock.until = 0; toast("这个环境存不下，开始不了"); return; }
+  showLock();                    // 里面会 paintLockLeft + 把节拍换成 1 秒
+  toast(`倒计时开始了，${lock.waitH} 小时后软件锁自己关掉`);
 }
 function lockBad(msg){
   lockTries++;
@@ -7442,6 +7878,14 @@ function lockBad(msg){
   const pad = $("lockPad");
   if (pad) pad.classList.add("fail");
 }
+/* 边打边验用的一发：只回答"对不对"，一个字都不往界面上写。
+   ⚠️ 算不出来（环境不支持）也返回 false —— 这一档在设置那边就被 lockReady()
+      拦住了，真漏进来也是"不解锁"，不会误放行。 */
+async function lockPeek(text){
+  if (!lock.on || !text) return false;
+  try{ return (await lockDigest(String(text), lock.salt)) === lock.hash; }
+  catch{ return false; }
+}
 async function lockTryPwd(text){
   if (!lock.on || !text) return;
   let d = "";
@@ -7452,7 +7896,8 @@ async function lockTryPwd(text){
 function lockUnlocked(){
   $("lockScreen").hidden = true;
   lockHint("", false);
-  $("lockBody").innerHTML = "";
+  $("lockBody").innerHTML = "";   // 倒计时那行跟着一起没了（第二十一批第 1 项）
+  armLockTimer();                 // 锁屏收了，节拍退回 20 秒
 }
 
 /* ---- 设置里那一行 ---- */
@@ -7465,6 +7910,14 @@ function syncLockUI(){
   // 电脑端只有密码 —— 这一行整个收起来。判据用的是窄屏断点，
   // 和全项目"电脑端 / 手机端"是同一把尺子（见 narrow()）。
   $("lockModeRow").toggleAttribute("hidden", !narrow());
+  /* 「忘了密码后等多久」这一行（第二十一批第 1 项）。
+     只在锁开着的时候露出来 —— 没锁的时候压根没有"忘了密码"这回事。
+     ⚠️ 人正在这个框里打字的时候**别去动 value**：夹一次就会把打到一半的
+        "7"（本来要打 72）当场改成 1。等 change 事件收口。 */
+  const waitRow = $("lockWaitRow"), waitIn = $("lockWaitH");
+  waitRow.toggleAttribute("hidden", !lock.on);
+  if (document.activeElement !== waitIn) waitIn.value = String(lock.waitH);
+
   // 这一段只剩两种要说的情况。原来那段"忘了密码谁也找不回来"的说明
   // 按第二十批第 6 项删掉，并且第 8 项给忘记密码补了一条真的出路。
   const note = $("lockNote");
@@ -7473,11 +7926,11 @@ function syncLockUI(){
     note.textContent = "这个环境不支持加密（crypto.subtle 不可用），软件锁打不开。";
     return;
   }
-  // 忘了密码、在锁屏上定了钟点的话，倒计时得让人看得见 ——
-  // 不然"锁怎么还不关"没有任何地方能回答。没定钟点这一行就是空的。
+  // 倒计时在走的话得让人看得见 —— 不然"锁怎么还不关"没有任何地方能回答。
+  // 读数本身在锁屏上（那里 1 秒一跳），这儿只报个大概。
   const left = lockLeftHours();
   note.hidden = !left;
-  if (left) note.textContent = `忘了密码等自动关：还有约 ${left} 小时。到点后软件锁会自己关掉，到时候在这儿重新设一个。`;
+  if (left) note.textContent = `忘了密码后正在等自动关：还有约 ${left} 小时。到点后软件锁会自己关掉，到时候在这儿重新设一个。`;
 }
 
 /* 设置流程：密码输两遍 / 九宫格画两遍，两遍一样才落盘。
@@ -7558,7 +8011,7 @@ $("lockModal").addEventListener("pointerdown", e => { if (e.target === $("lockMo
 function setLockOn(on){
   if (on === lockOn()) return;
   if (on){ openLockSet(); return; }       // 开 = 先设一遍，设成了才算开
-  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0 };
+  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0, waitH: lock.waitH };
   armLockTimer();                         // 手动关掉的，那个钟点也一并作废
   lockSave(); syncLockUI();
   toast("软件锁已关");
@@ -7580,6 +8033,16 @@ $("segLockOn").addEventListener("click", () => setLockOn(true));
 $("segLockOff").addEventListener("click", () => setLockOn(false));
 $("segLockPattern").addEventListener("click", () => setLockMode("pattern"));
 $("segLockPwd").addEventListener("click", () => setLockMode("password"));
+
+/* 「忘了密码后等多久」（第二十一批第 1 项）。夹一下再落盘 ——
+   存档里那个数手改得动，不夹的话改成 0 就等于"点一下立刻解锁"。
+   用 change 不用 input：number 框每敲一个字符都会发 input，
+   打到一半的 "7"（本来要打 72）会被当场夹成 1，越打越别扭。 */
+$("lockWaitH").addEventListener("change", () => {
+  lock.waitH = clampWaitH($("lockWaitH").value);
+  if (!lockSave()){ toast("这个环境存不下，改不了"); return; }
+  syncLockUI();
+});
 
 $("navSettings").addEventListener("click", () => {
   setDrawer(false);            // 手机上抽屉让位给设置弹窗
@@ -7905,21 +8368,6 @@ async function shareViaAndroid(blob, name, mime){
   }
 }
 
-async function shareViaShell(blob, name, mime){
-  toast("正在准备分享…", { hold: true });
-  try{
-    await window.listra.shareBegin({ name, mime });
-    await shareChunks(blob, data => window.listra.shareChunk({ data }));
-    const r = await window.listra.shareEnd();
-    hideToast();
-    toast(r && r.copied
-      ? "已经复制到剪贴板 —— 切到 QQ／微信 的聊天框里按 Ctrl+V 就发出去了"
-      : "已经在文件夹里给你选中了，把它拖进 QQ／微信 的聊天框就行");
-  }catch(err){
-    toast("分享没能送出去：" + ((err && err.message) || err));
-  }
-}
-
 async function shareViaWeb(blob, name, mime){
   const file = new File([blob], name, { type: mime });
   try{
@@ -7949,19 +8397,40 @@ function shareViaDownload(blob, name){
 
 async function shareItem(m){
   if (!m) return;
-  let blob = (m.file instanceof Blob) ? m.file : null;
+
+  /* 电脑端（第 8 项）：不再"生成一份副本再交给系统"，直接把**真实文件本身**
+     在资源管理器里点出来 —— 文件名是选中状态，路径也顺手进了剪贴板。
+     用户要的就是"我自己拿这个文件去发"，中间多一份副本只会多一份要清理的东西。
+     ⚠️ 只认主进程点过名的那条路径（KNOWN_FILES）。页面递过去的路径它不认就不动。 */
+  if (shellBridge && typeof shellBridge.revealFile === "function" && m.path){
+    try{
+      const r = await shellBridge.revealFile(m.path);
+      if (r && r.ok){
+        toast(r.copied
+          ? "已经帮你在文件夹里选中了，路径也复制到了剪贴板 —— 拖进聊天框或按 Ctrl+V 都行"
+          : "已经帮你在文件夹里选中了，把它拖进 QQ／微信 的聊天框就行");
+      } else if (r && r.why === "not-known"){
+        // 主进程还没登记过这条（极少见，只有索引刚恢复还没走完 remember 那一趟）
+        toast("刚把它接回来，稍等一下再点一次");
+      } else {
+        toast("这个文件找不到了，它可能被移走或删掉了");
+      }
+      return;
+    }catch(e){ /* 壳那条路走不通就往下退，别把分享整件事卡死 */ }
+  }
+
+  let blob = isBlob(m.file) ? m.file : null;
   if (!blob){
     // "只建索引"进来的、或者 v1 时代的老记录，本体还在库里躺着
     try{
       const got = await DB.get("files", m.id);
-      if (got instanceof Blob) blob = got;
+      if (isBlob(got)) blob = got;
     }catch{}
   }
   if (!blob){ toast("这一条只剩索引了，本体不在这台机器上，没有东西可分享"); return; }
   const name = safeShareName(m.name);
   const mime = blob.type || mimeOfName(name);
   if (CapShare) return shareViaAndroid(blob, name, mime);
-  if (window.listra && typeof window.listra.shareBegin === "function") return shareViaShell(blob, name, mime);
   // ⚠️ 问的是 canShare 不是 share：navigator.share 在桌面 Chrome/Edge 上一直有，
   //    但**带文件**的那一档是要单问的（火狐就属于"有 share、不能 share 文件"）。
   if (navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: mime })] }))
@@ -9228,9 +9697,28 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.6";
+const APP_VERSION = "0.1.7";
 
 const CHANGELOG = [
+  { v: "0.1.7", date: "2026-09-17", title: "教程、保存位置与窗口外观",
+    items: [
+      "侧边栏「教程」能用了 —— 一整页文档式的使用教程，左边目录右边正文",
+      "文档格式参考 DeepSeek 接口文档：左侧目录、等宽字排的界面名称、表格对照、常见问题",
+      "软件锁：忘记密码之后等的那个时长挪进「设置」里预先定好，锁屏上改不了了",
+      "软件锁：输对密码直接进去，不用再点一下「解锁」",
+      "软件锁：点「忘了密码」只是问一句要不要开始倒计时，时间由设置里那个数说了算",
+      "软件锁和开屏页跟着当前主题走（清新 / 黑夜 / 关灯三套都跟）",
+      "手机端九宫格：点和连线都加粗加大了，浅色底上看得清了",
+      "手机端播放台：时间显示成完整的 xx:xx / xx:xx，不再只剩当前进度",
+      "电脑端：右上角那三颗窗口按钮跟着主题换颜色（关灯模式下是暗的）",
+      "手机端：系统状态栏、手势条也跟着主题换，通知栏和 Home 键那一带不再是白的",
+      "手机端：分享留下的临时副本，下次分享时清掉，超过 24 小时也会自动清",
+      "电脑端：导入的文件存成磁盘上的真实文件，默认放在软件的安装位置，「设置 · 文件位置」里可以换到别的盘",
+      "电脑端：软件内部不再另存一整份，播放直接读原文件",
+      "电脑端：分享文件改成在文件夹里直接选中那个文件，不再生成副本",
+      "电脑端：从资料库移除会连磁盘上的真实文件一起删，所以确认键要按住 5 秒",
+      "老版本导入的文件会自动搬到磁盘上，搬完问一句「软件里那份要不要删」",
+    ] },
   { v: "0.1.6", date: "2026-09-17", title: "文件夹、外观与分享",
     items: [
       "手机端：「选文件夹」真能用了 —— 走系统的文件夹选择器，挑中的目录里有多少音视频就进来多少",
@@ -9391,16 +9879,287 @@ $("navAbout").addEventListener("click", openAbout);
 $("navAbout").addEventListener("keydown", e => {
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openAbout(); }
 });
-/* 投送 / 教程：第二十批第 11 项先占位。两颗都还没页面可开，
-   点了一句大白话说清楚，别让用户以为按坏了 —— 「关于」里那几条外链
-   没填 url 的时候也是这个路子。 */
-for (const [id, what] of [["navCast", "投送"], ["navGuide", "教程"]]){
-  const go = () => toast(`「${what}」还在做，这一版先占个位置`);
-  $(id).addEventListener("click", go);
-  $(id).addEventListener("keydown", e => {
+/* 「投送」还是占位。点一句大白话说清楚，别让用户以为按坏了 ——
+   「关于」里那几条外链没填 url 的时候也是这个路子。 */
+{
+  const go = () => toast("「投送」还在做，这一版先占个位置");
+  $("navCast").addEventListener("click", go);
+  $("navCast").addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); }
   });
 }
+
+/* ============================================================
+   16.7 教程页（第二十一批第 10 项）
+   ============================================================
+   版式照 DeepSeek 官方接口文档那种文档站：左边一条目录，右边一栏正文。
+   内容只写本软件自己的用法，一段一件事，不用口语、不铺陈。
+
+   ⚠️ 这份正文是**用户手册**，不是更新日志 —— 写的是"现在怎么用"，
+      不是"这一版改了什么"。改动某个功能的用法时，这条也得跟着改，
+      别让教程停在上个版本（「关于」里那份 CHANGELOG 才是记历史的）。
+   ⚠️ 讲的每一句都得能在软件里找到对应的东西。写之前先把那一处读一遍，
+      凭印象写出来的手册比没有更糟。 */
+const GUIDE = [
+  { id:"intro", title:"简介", lead:"听雨是什么，能做什么。", body:`
+    <p class="gd-p">听雨是一款本地音视频播放器。程序本体是一个网页文件，双击就能用，不联网也照常运行。导入的文件按原样保存，音质和画质不发生任何改变。</p>
+    <p class="gd-p">资料库、收藏夹、播放记录全部保存在这台设备上，不上传、不联网、不同步。软件目前提供三种形态：网页版、电脑版（Windows）、手机版（Android），功能一致。</p>
+    <h2 class="gd-h2">主要功能</h2>
+    <ul class="gd-ul">
+      <li>导入并管理本地音频与视频，支持按文件夹批量导入</li>
+      <li>波形进度条、逐帧查看、片段循环、标记点</li>
+      <li>收藏夹、待播清单、随机临时待播</li>
+      <li>歌词页与唱片页，支持读取内嵌歌词，也支持自行填写</li>
+      <li>清新、黑夜、关灯三种外观</li>
+      <li>软件锁：九宫格或密码</li>
+    </ul>` },
+
+  { id:"start", title:"安装与启动", lead:"三种形态分别怎么装。", body:`
+    <h2 class="gd-h2">网页版</h2>
+    <p class="gd-p">用浏览器打开 <span class="gd-k">index.html</span> 即可。建议使用 Chrome、Edge 或新版 Safari。</p>
+    <h2 class="gd-h2">电脑版（Windows）</h2>
+    <p class="gd-p">提供两种安装包：安装版与便携版。安装版会写入开始菜单和桌面快捷方式；便携版解压后直接运行，不写注册表，可以放在 U 盘里带走。</p>
+    <h2 class="gd-h2">手机版（Android）</h2>
+    <p class="gd-p">安装 APK 后直接打开。首次导入文件时系统会询问读取媒体文件的权限，允许后即可使用。</p>
+    <div class="gd-note">三种形态的资料库互相独立。在本机导入的文件不会出现在另一台设备上。</div>` },
+
+  { id:"import", title:"导入文件", lead:"把文件放进资料库。", body:`
+    <p class="gd-p">点击顶栏的 <span class="gd-k">添加文件</span>，在弹出菜单里选择 <span class="gd-k">选择文件</span> 或 <span class="gd-k">选择文件夹</span>。也可以把文件或文件夹直接拖到窗口里。</p>
+    <p class="gd-p">导入是批量操作，可以一次选多个文件。导入完成后，条目出现在 <span class="gd-k">资料库 · 音频</span> 或 <span class="gd-k">资料库 · 视频</span> 中，按文件类型自动归类。</p>
+    <h2 class="gd-h2">导入方式</h2>
+    <p class="gd-p">在 <span class="gd-k">设置 · 导入方式</span> 中二选一：</p>
+    <table class="gd-table">
+      <tr><th>方式</th><th>行为</th><th>适合</th></tr>
+      <tr><td>保存文件<br><span class="gd-k">电脑版显示为「复制到保存位置」</span></td><td>导入时把文件复制一份收进软件管理的位置。原文件删除、移动都不影响播放。</td><td>希望资料库长期稳定，默认选项</td></tr>
+      <tr><td>只建索引<br><span class="gd-k">电脑版显示为「直接引用原文件」</span></td><td>只记录文件所在位置，不复制。不额外占用空间，但原文件被删除、改名或移动后会失效。</td><td>文件量大、已有固定存放位置</td></tr>
+    </table>
+    <div class="gd-note">两种方式下，你原来的文件都不会被修改。时长、标签、标记点、片段、播放进度、波形在两种方式下都完整保留。</div>
+    <h2 class="gd-h2">电脑版的文件保存位置</h2>
+    <p class="gd-p">电脑版选「复制到保存位置」导入的文件，统一放在 <span class="gd-k">设置 · 文件位置</span> 显示的文件夹里。默认是软件的安装位置，便携版就是程序所在的那个文件夹。</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 文件位置</span> 点 <span class="gd-k">更改</span> 可以选择其他磁盘上的文件夹。更改在重启软件后生效，已经导入的文件留在原处不动，仍然可以正常播放。</p>
+    <div class="gd-note">软件内部不再另存整份副本，播放时直接读取该文件。因此 <span class="gd-k">从资料库移除</span> 会连磁盘上的这个文件一并删除，操作前会要求按住 5 秒确认。以「直接引用原文件」方式导入的条目不受影响，删除条目不会动你的原文件。</div>
+    <h2 class="gd-h2">重复导入</h2>
+    <p class="gd-p">同一批文件里如果有已经导入过的，会先弹窗询问，可以选择取消导入、都留着，或者用新文件覆盖旧条目。</p>` },
+
+  { id:"library", title:"资料库", lead:"条目的组织与操作。", body:`
+    <p class="gd-p">侧栏分四块：<span class="gd-k">资料库</span>（音频、视频）、<span class="gd-k">收藏夹</span>、<span class="gd-k">播放</span>（待播、播放历史等）。顶部是 <span class="gd-k">我的</span> 页面。</p>
+    <h2 class="gd-h2">排列方式</h2>
+    <p class="gd-p">在 <span class="gd-k">设置 · 排列方式</span> 中切换 <span class="gd-k">书架</span>（大封面网格）与 <span class="gd-k">列表</span>（一行一条）。</p>
+    <h2 class="gd-h2">条目操作</h2>
+    <p class="gd-p">在条目上点右键，或点条目右下角的 <span class="gd-k">⋯</span>，打开操作菜单：</p>
+    <table class="gd-table">
+      <tr><th>操作</th><th>说明</th></tr>
+      <tr><td>详情</td><td>查看格式、时长、大小、路径、播放次数等。</td></tr>
+      <tr><td>编辑详情</td><td>修改名称、作者、标签。</td></tr>
+      <tr><td>分享文件</td><td>把文件交给系统分享，见「分享文件」一节。</td></tr>
+      <tr><td>从资料库移除</td><td>把条目连同软件保存的那一份一起删除。电脑版会同时删除「文件位置」里的真实文件，因此确认键需要按住 5 秒。此操作不可撤销。</td></tr>
+      <tr><td>添加到</td><td>加入收藏夹或待播清单，可多选。</td></tr>
+    </table>` },
+
+  { id:"play", title:"播放", lead:"播放台与基本控制。", body:`
+    <p class="gd-p">点条目开始播放。窗口底部的播放台显示当前条目的封面、名称、作者，以及上一首、播放 / 暂停、下一首。</p>
+    <h2 class="gd-h2">进度条</h2>
+    <p class="gd-p">进度条以波形呈现，长度即总时长。拖动波形任意位置跳转；鼠标移到波形上会显示该处的时间，视频还会显示对应画面。</p>
+    <h2 class="gd-h2">音量</h2>
+    <p class="gd-p">点播放台右侧的喇叭展开音量条，可以在 0 到 100 之间拖动，刻度为 25、50、75。点击喇叭本身切换静音。</p>
+    <h2 class="gd-h2">接着上次看</h2>
+    <p class="gd-p">每个条目都会记住上次播放到的位置。在 <span class="gd-k">设置 · 接着上次看</span> 中选择三种行为之一：</p>
+    <ul class="gd-ul">
+      <li><span class="gd-k">自动跳转</span>：打开就直接从上次的位置继续。</li>
+      <li><span class="gd-k">点击跳转</span>：先提示上次的位置，点一下才跳过去。</li>
+      <li><span class="gd-k">静默跳转</span>：直接跳转，不提示。</li>
+    </ul>` },
+
+  { id:"video", title:"视频", lead:"画面相关的操作。", body:`
+    <h2 class="gd-h2">全屏</h2>
+    <p class="gd-p">播放视频时，播放台右侧出现全屏按钮。全屏后鼠标移动会带出浮标，包含返回、上一首、播放 / 暂停、下一首和播放设置。按 Esc 退出全屏。</p>
+    <h2 class="gd-h2">逐帧查看</h2>
+    <p class="gd-p">只在播放视频时出现。播放台中间多出「上一帧」「下一帧」两颗按钮，按一次走一帧。若视频正在播放，按下时会先暂停 —— 否则播放头会立刻把画面推走。</p>
+    <h2 class="gd-h2">画面预览</h2>
+    <p class="gd-p">鼠标移到进度条上，或手指按住进度条拖动时，会在该位置上方显示对应的画面和时刻。</p>
+    <h2 class="gd-h2">画中画</h2>
+    <p class="gd-p">电脑版与网页版使用浏览器自带的画中画；手机版使用系统的小窗。手机版进入小窗后，界面会自动切换到适合小窗的精简形态。</p>` },
+
+  { id:"audio", title:"音频", lead:"唱片页与歌词页。", body:`
+    <p class="gd-p">开始播放一首新的音频时，会自动打开唱片页。同一首暂停后再继续不会重复打开；手动关闭后也不会再自动弹出。</p>
+    <h2 class="gd-h2">唱片页</h2>
+    <p class="gd-p">显示唱片与当前条目的封面、名称、作者。播放时唱片旋转，暂停时停在原处。</p>
+    <h2 class="gd-h2">歌词页</h2>
+    <p class="gd-p">在唱片上点一下，或按 <span class="gd-key">Enter</span>、<span class="gd-key">空格</span>，翻到歌词那一面；再点一下翻回唱片。</p>
+    <p class="gd-p">歌词优先读取文件里内嵌的那一份。没有内嵌歌词时，可以点右上角的铅笔自行填写，填写的内容会覆盖内嵌歌词并保存在本机。带时间轴的歌词按原文逐行显示，不做同步高亮。</p>
+    <h2 class="gd-h2">返回</h2>
+    <p class="gd-p">点播放台任意空白处，或按 Esc，回到原来的页面。</p>` },
+
+  { id:"collect", title:"收藏夹与待播", lead:"自己组织播放队列。", body:`
+    <h2 class="gd-h2">收藏夹</h2>
+    <p class="gd-p">点侧栏「收藏夹」右侧的 <span class="gd-k">＋</span> 新建。条目可以同时属于多个收藏夹。内置的 <span class="gd-k">喜欢</span> 是普通收藏夹，用法相同。</p>
+    <h2 class="gd-h2">待播</h2>
+    <p class="gd-p">点侧栏「播放」右侧的 <span class="gd-k">＋</span> 新建待播清单，提供三种：</p>
+    <table class="gd-table">
+      <tr><th>种类</th><th>说明</th></tr>
+      <tr><td>普通待播</td><td>一直保留，随时编辑。</td></tr>
+      <tr><td>临时待播</td><td>放完最后一首后自动消失。</td></tr>
+      <tr><td>随机临时待播</td><td>按类型、标签、作者、名称圈定范围，随机抽取指定数量，播完即散。</td></tr>
+    </table>
+    <h2 class="gd-h2">排序与拖动</h2>
+    <p class="gd-p">列表右上角的排序按钮可以在名称、作者、时长、导入时间等之间切换，再点一次切换升降序。按住条目可以拖动改变顺序，也可以整块拖到另一个收藏夹或待播里。</p>` },
+
+  { id:"rules", title:"播放设置", lead:"速度、顺序、循环与定时。", body:`
+    <p class="gd-p">点播放台右侧的滑块图标，或全屏浮标上的同一颗图标，打开播放设置。</p>
+    <table class="gd-table">
+      <tr><th>项目</th><th>说明</th></tr>
+      <tr><td>速度</td><td>0.5× 到 2× 之间若干档。</td></tr>
+      <tr><td>顺序</td><td>顺序播放或随机播放。</td></tr>
+      <tr><td>循环</td><td>关闭、单曲循环、列表循环。</td></tr>
+      <tr><td>次数</td><td>限制循环次数：不限、1、2、3、5 次。</td></tr>
+      <tr><td>播完</td><td>一首放完后是继续下一首，还是停在这里。</td></tr>
+      <tr><td>定时</td><td>15、30、60 分钟后自动暂停，也可以指定一个具体时刻。</td></tr>
+      <tr><td>定量</td><td>放完指定首数后停下。</td></tr>
+    </table>
+    <div class="gd-note">定时和定量到点后是暂停，不是关闭软件。播放台上会显示剩余时间或剩余首数。</div>` },
+
+  { id:"marks", title:"标记点与片段", lead:"记住某个位置，或反复听某一段。", body:`
+    <h2 class="gd-h2">标记点</h2>
+    <p class="gd-p">播放到需要记住的位置时，点播放台右侧的书签图标，再点 <span class="gd-k">记下当前位置</span>。标记点可以重命名、删除，点一下即跳到该位置。</p>
+    <h2 class="gd-h2">片段循环</h2>
+    <p class="gd-p">在起始位置点 <span class="gd-k">设 A</span>，在结束位置点 <span class="gd-k">设 B</span>，然后点 <span class="gd-k">记下这一段</span> 保存下来。之后点该片段即可从 A 开始反复播放。片段可以随时启用或停用。</p>
+    <div class="gd-note">标记点和片段保存在条目自己身上，随条目一起保留。</div>` },
+
+  { id:"edit", title:"编辑详情", lead:"改名称、作者与标签。", body:`
+    <p class="gd-p">在操作菜单里选 <span class="gd-k">编辑详情</span>。</p>
+    <ul class="gd-ul">
+      <li><span class="gd-k">名称</span>：留空则使用文件名。</li>
+      <li><span class="gd-k">作者</span>：歌手、播客、UP 主等。</li>
+      <li><span class="gd-k">标签</span>：可填多个，输入时会提示已经用过的标签。</li>
+    </ul>
+    <p class="gd-p">修改只作用在资料库里，不会写回原文件。</p>` },
+
+  { id:"search", title:"搜索与筛选", lead:"在上百条里找到那一条。", body:`
+    <p class="gd-p">顶栏搜索框支持按标题、作者、标签搜索，边输入边出结果，可以用上下方向键选择、回车打开。</p>
+    <p class="gd-p">音频页和视频页各自还有筛选按钮，可以按作者或标签过滤当前列表。筛选与搜索可以叠加使用。</p>` },
+
+  { id:"theme", title:"外观", lead:"三种配色与两种排列。", body:`
+    <p class="gd-p">在 <span class="gd-k">设置 · 外观</span> 中切换：</p>
+    <table class="gd-table">
+      <tr><th>外观</th><th>说明</th></tr>
+      <tr><td>清新</td><td>白底薄荷绿，默认。</td></tr>
+      <tr><td>黑夜</td><td>白底换成深色底，薄荷绿不变。</td></tr>
+      <tr><td>关灯</td><td>在清新的基础上整体蒙一层暗色，正在播放的画面不受影响。</td></tr>
+    </table>
+    <p class="gd-p">电脑版的窗口按钮、手机版的状态栏与手势条会随外观一起变色。软件锁的解锁页和启动画面使用同一套配色。</p>` },
+
+  { id:"lock", title:"软件锁", lead:"打开软件前需要先解锁。", body:`
+    <p class="gd-p">在 <span class="gd-k">设置 · 软件锁</span> 中开启，并设置解锁方式：</p>
+    <ul class="gd-ul">
+      <li><span class="gd-k">九宫格</span>：连接至少 4 个点。手机版提供。</li>
+      <li><span class="gd-k">密码</span>：输入密码，输对即直接进入，不需要再点确认。输完按回车也可。</li>
+    </ul>
+    <p class="gd-p">解锁方式在电脑版上只有密码；九宫格仅手机版提供。</p>
+    <h2 class="gd-h2">忘记密码</h2>
+    <p class="gd-p">在解锁页点 <span class="gd-k">忘记密码</span>，可以选择开始一段倒计时，倒计时结束后软件锁自动关闭。倒计时期间任何人都能进入，因此时长必须事先定好。</p>
+    <p class="gd-p">时长在 <span class="gd-k">设置 · 软件锁 · 忘了密码后等多久自动关</span> 中设置，范围 1 到 720 小时，默认 24 小时。<b>解锁页上不能修改这个时长</b>，只能选择开始或放弃。倒计时一旦开始，剩余时间会显示在解锁页下方，此时仍可退回去继续输密码。</p>
+    <div class="gd-note">软件锁保护的是打开软件这一道门。清除应用数据或重装软件会连同软件锁一起清除，它不能代替系统锁屏。</div>` },
+
+  { id:"storage", title:"存储与文件位置", lead:"东西存在哪，怎么找到它。", body:`
+    <p class="gd-p">资料库数据保存在本机：电脑版在软件的数据目录，手机版在应用私有目录，网页版在浏览器为本站分配的存储空间里。</p>
+    <p class="gd-p">音视频文件本体：电脑版存在 <span class="gd-k">设置 · 文件位置</span> 显示的文件夹里（可以更改），手机版与网页版存在各自的私有空间里。</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 文件位置</span> 里：</p>
+    <ul class="gd-ul">
+      <li>电脑版点 <span class="gd-k">在文件夹中显示</span>，打开存放音视频的那个文件夹；点 <span class="gd-k">更改</span> 可以换到其他磁盘。</li>
+      <li>手机版点 <span class="gd-k">打开应用信息</span>，进入系统的应用信息页，可以在那里查看占用空间或清除数据。</li>
+      <li>网页版没有对应的文件夹，按钮不可用。</li>
+    </ul>
+    <div class="gd-note">手机版无法直接打开数据目录，这是 Android 11 起对应用私有目录的限制，不是权限问题。</div>` },
+
+  { id:"share", title:"分享文件", lead:"把文件交给别的应用。", body:`
+    <p class="gd-p">在条目的操作菜单里选 <span class="gd-k">分享文件</span>。</p>
+    <ul class="gd-ul">
+      <li><b>手机版</b>：弹出系统分享面板，选择要发送到的应用。软件会先把文件写成一个临时副本供对方读取，副本在下次分享时清除，超过 24 小时也会自动清除。</li>
+      <li><b>电脑版</b>：直接在文件管理器里打开该文件所在的位置并选中它，之后可以自行复制、发送或打开。</li>
+      <li><b>网页版</b>：走浏览器自己的下载或分享流程。</li>
+    </ul>` },
+
+  { id:"keys", title:"键盘快捷键", lead:"电脑版可用。", body:`
+    <p class="gd-p">焦点在输入框里时，快捷键不生效。</p>
+    <table class="gd-table">
+      <tr><th>按键</th><th>作用</th></tr>
+      <tr><td>空格</td><td>播放 / 暂停</td></tr>
+      <tr><td>← / →</td><td>后退 / 前进 5 秒</td></tr>
+      <tr><td>Shift + ← / →</td><td>上一首 / 下一首</td></tr>
+      <tr><td>↑ / ↓</td><td>音量加 / 减</td></tr>
+      <tr><td>M</td><td>静音开关</td></tr>
+      <tr><td>Esc</td><td>关闭当前打开的浮层、返回上一页、退出全屏</td></tr>
+    </table>` },
+
+  { id:"faq", title:"常见问题", lead:"", body:`
+    <h2 class="gd-h2">导入之后，我原来的文件可以删掉吗？</h2>
+    <p class="gd-p">取决于导入方式。<b>手机版与网页版</b>：选「保存文件」时可以，软件里存的是副本；选「只建索引」时不可以。<b>电脑版</b>：选「复制到保存位置」时可以，文件已经复制进了软件管理的文件夹，原文件与它互不相干；选「直接引用原文件」时不可以。</p>
+    <h2 class="gd-h2">条目显示「离线」是什么意思？</h2>
+    <p class="gd-p">只建索引导入的条目找不到原文件了，通常是原文件被移动、改名或删除。重新导入该文件即可恢复。</p>
+    <h2 class="gd-h2">换一台设备，为什么资料库是空的？</h2>
+    <p class="gd-p">资料库只存在本机，软件不做同步也不做导出。换设备需要重新导入。</p>
+    <h2 class="gd-h2">视频没有封面，显示的是一张画面。</h2>
+    <p class="gd-p">视频没有内嵌封面时，软件自动取第一帧作为封面；播放过一次之后，封面会换成退出时的那一帧。</p>
+    <h2 class="gd-h2">为什么播放某些文件没有声音？</h2>
+    <p class="gd-p">软件使用系统自带的解码能力。少数编码格式（如部分无损音频、部分封装格式）系统不支持，此时无法播放。这是解码器的问题，与文件本身是否完整无关。</p>` }
+];
+
+function renderGuide(){
+  $("guideVer").textContent = "v" + APP_VERSION;
+  $("guideToc").innerHTML = `<div class="gd-toc-cap">目录</div>` + GUIDE.map((s, i) =>
+    `<a href="#gd-${s.id}" data-gd="${s.id}"><span class="gd-num">${String(i + 1).padStart(2, "0")}</span>${esc(s.title)}</a>`
+  ).join("");
+  $("guideInner").innerHTML = GUIDE.map(s => `
+    <section id="gd-${s.id}">
+      <h1 class="gd-h1">${esc(s.title)}</h1>
+      ${s.lead ? `<p class="gd-lead">${esc(s.lead)}</p>` : ""}
+      ${s.body}
+    </section>`).join("");
+}
+renderGuide();
+
+function openGuide(){
+  if (!$("guidePage").hidden) return;
+  $("guidePage").hidden = false;
+  $("guideDoc").scrollTop = 0;
+  paintTocCurrent();
+}
+function closeGuide(){ $("guidePage").hidden = true; }
+
+/* 目录里那条高亮。滚动时节流算一次 —— 正文里十几个 section，
+   每帧都 getBoundingClientRect 一遍没必要。 */
+let tocTick = 0;
+function paintTocCurrent(){
+  const doc = $("guideDoc");
+  const links = [...$("guideToc").querySelectorAll("a")];
+  if (!links.length) return;
+  const top = doc.getBoundingClientRect().top + 24;
+  let cur = links[0];
+  for (const a of links){
+    const sec = document.getElementById("gd-" + a.dataset.gd);
+    if (sec && sec.getBoundingClientRect().top <= top) cur = a;
+  }
+  links.forEach(a => a.classList.toggle("on", a === cur));
+}
+$("guideDoc").addEventListener("scroll", () => {
+  if (tocTick) return;
+  tocTick = requestAnimationFrame(() => { tocTick = 0; paintTocCurrent(); });
+});
+/* 目录里的链接是 <a href="#gd-xxx">，点了会改 location.hash。
+   这是个单文件应用，改 hash 会污染地址、也会让返回键多出一层历史，
+   所以拦下来自己滚。 */
+$("guideToc").addEventListener("click", e => {
+  const a = e.target instanceof Element ? e.target.closest("a[data-gd]") : null;
+  if (!a) return;
+  e.preventDefault();
+  const sec = document.getElementById("gd-" + a.dataset.gd);
+  if (sec) $("guideDoc").scrollTo({ top: sec.offsetTop - 18, behavior: reduceMotion() ? "auto" : "smooth" });
+});
+$("guideBack").addEventListener("click", closeGuide);
+$("navGuide").addEventListener("click", openGuide);
+$("navGuide").addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openGuide(); }
+});
 
 /* 从最上层往下依次关掉一层。关到了返回 true，全都关着返回 false。
    Esc 和安卓的返回键共用这一份 —— 两处各写一条链迟早会分叉，
@@ -9417,6 +10176,8 @@ function closeTopLayer(){
   if (!$("editModal").hidden){ closeEdit(); return true; }
   if (!$("infoModal").hidden){ closeInfo(); return true; }
   if (!$("setModal").hidden){ $("setModal").hidden = true; return true; }
+  // 教程页也盖着整屏，和唱片页同一个道理，排在两个面板前面
+  if (!$("guidePage").hidden){ closeGuide(); return true; }
   // 唱片页排在两个面板前面：它盖着整屏，看不见的下层不该抢先接走 Esc
   if (!$("vinyl").hidden){ closeVinyl(); return true; }
   if (!rulePanel.hidden){ closeRulePanel(); return true; }
@@ -9445,7 +10206,7 @@ addEventListener("keydown", e => {
       || !$("editModal").hidden || !$("infoModal").hidden || !$("randModal").hidden
       || !addMenu.hidden || !rulePanel.hidden || !markPanel.hidden
       || !searchDrop.hidden || !filterMenu.hidden || !$("vinyl").hidden
-      || !$("aboutModal").hidden) return;
+      || !$("aboutModal").hidden || !$("guidePage").hidden) return;
   // 播放列表 / 排序 / 新建待播这几个浮层的收口已经并进 closeTopLayer() 了
   // （上面那句 Escape 就把它们收掉了），这里只剩"空格和方向键别去动播放台"。
   if (!plPanel.hidden || !sortMenu.hidden || !queueMenu.hidden || !addFileMenu.hidden) return;
@@ -9507,6 +10268,9 @@ let CapShare = (onNative && CAP.Plugins) ? (CAP.Plugins.Share || null) : null;
 // Dir 也是自己写的那颗（mobile/android/.../DirPlugin.java）。第 1 项的「选文件夹」。
 // **只有安卓有** —— 网页端走 showDirectoryPicker，那边是真的能用。
 let CapDir = (onNative && CAP.Plugins) ? (CAP.Plugins.Dir || null) : null;
+// Tint 也是自己写的那颗（mobile/android/.../TintPlugin.java）。第二十一批第 5 项的
+// 状态栏 + 手势条配色。**只有安卓有** —— 电脑端走 preload 那条 setChrome 转 IPC。
+let CapTint = (onNative && CAP.Plugins) ? (CAP.Plugins.Tint || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
@@ -9516,22 +10280,33 @@ function exitApp(){
   } catch (e){}
 }
 
-/* 状态栏配色跟着软件走。
+/* 状态栏 / 手势条（就是那颗 home 键待的地方）的配色跟着软件走（第二十一批第 5 项）。
    两处会让它对不上：
    ① 设备开着深色模式时，SystemBars 默认那档 DEFAULT 是"读系统夜间模式"的
-      （getStyleForTheme），深色模式下会给**浅色图标** —— 而这个软件恒为白底薄荷，
+      （getStyleForTheme），深色模式下会给**浅色图标** —— 这个软件的底色是白 + 薄荷，
       浅色图标等于看不见；
-   ② 状态栏背后那层是 decorView 的 windowBackground，它来自主题，
-      Capacitor 库自带的主题是深色的，会透出一截灰（这一步在 styles.xml 里改）。
-   这里显式要 LIGHT —— 注意这名字是反的：LIGHT 指的是"浅色背景"，落下去是
-   setAppearanceLightStatusBars(true)，也就是**深色图标**。
-   不传 bar 就是状态栏和导航栏一起管，底部那条也一样是白底。 */
-if (CapBars){
+   ② 状态栏背后那层是 decorView 的 windowBackground，它来自主题（styles.xml 里那份
+      恒为 #F6FAF8），换到黑夜/关灯时它不会跟着变，会透出一截亮边。
+   ①归 SystemBars.setStyle：注意这名字是反的，LIGHT 指的是"浅色背景"，落下去是
+   setAppearanceLightStatusBars(true)，也就是**深色图标**；黑夜模式要反着来。
+   不传 bar 就是状态栏和导航栏一起管。
+   ②归自己写的那颗 Tint（mobile/android/.../TintPlugin.java）—— Capacitor 8 的
+   SystemBars 只有 setStyle / show / hide / setAnimation 四个方法，颜色是它从主题里
+   现读的（SystemBars.java:299），JS 这边递不进去，只能自己写一颗。
+   ⚠️ 顺序不能反：setStyle 会顺手把 decorView 的底色刷回主题色，得让 Tint 收尾。 */
+chromeNative = c => {
   try {
-    const r = CapBars.setStyle({ style: "LIGHT" });
-    if (r && r.catch) r.catch(() => {});
+    if (CapBars){
+      const r = CapBars.setStyle({ style: c.dark ? "DARK" : "LIGHT" });
+      if (r && r.catch) r.catch(() => {});
+    }
+    if (CapTint){
+      const r = CapTint.set({ color: c.color });
+      if (r && r.catch) r.catch(() => {});
+    }
   } catch (e){}
-}
+};
+applyChrome(themeGet());          // 装完立刻补一发，别等用户去设置里动一下才生效
 
 /* 安卓那半的悬浮小窗。
    ① modeChanged：系统只说"进/出了"，页面照着挂/摘 body.pip-on。
@@ -9635,6 +10410,50 @@ if (CapApp){
 let shellBridge = (typeof window !== "undefined" && window.listra
                    && typeof window.listra.revealUserData === "function") ? window.listra : null;
 
+/* ---------- 文件本体：电脑端存"真实文件"，软件内部不再留整份（第 6 + 8 项）----------
+   ---- 以前三端一个样：把整个 File 塞进 IndexedDB，软件目录里因此躺着一份几百兆的
+        副本 —— 分享要先把副本吐出来、C 盘被悄悄吃满、原文件删了副本还在。
+   ---- 现在电脑端换个活法：文件留在磁盘原位（或搬进「保存位置」那个文件夹），
+        软件里只记一条**路径**。播放直接喂 file:// 给播放器，连读都不用读进来。
+   ---- 手机和网页端照旧存整份 —— 那两边的"文件"根本没有一个稳定的系统路径，
+        安卓拿到的 content:// 授权是会过期的，今天能用明天就是死链。
+
+   ⚠️ 判据看的是"这个函数在不在"，不是"是什么平台"：老壳没有 pathFor，
+      页面自然退回存整份那条路，不会一半路径一半整份地拧着。 */
+function adoptable(){
+  return !!(shellBridge && typeof shellBridge.pathFor === "function"
+                         && typeof shellBridge.adopt === "function");
+}
+// 磁盘路径 → file:// 网址。Windows 是 D:\a\b，得先补上那个前导斜杠变成 /D:/a/b，
+// 否则 file://D:/a/b 会被当成主机名 D 解析，谁都打不开。
+function pathToUrl(p){
+  let s = String(p).replace(/\\/g, "/");
+  if (s.charAt(0) !== "/") s = "/" + s;
+  return "file://" + encodeURI(s).replace(/[?#]/g, c => "%" + c.charCodeAt(0).toString(16));
+}
+/* ⚠️ 判"这是不是一份文件"**不能**写 `x instanceof Blob`。
+   构造函数是每个 realm 各一份的：iframe 里造出来的 File 拿到这边，
+   instanceof 一路 false —— 明明在手上的文件被判成"没有本体"。
+   （测试台的 iframe 就是这样：文件在父页造、塞进 iframe 的库里。）
+   按能力认：能读出字节、有 size，就是播放器和分享要的东西。 */
+function isBlob(x){
+  return !!x && typeof x === "object"
+      && typeof x.size === "number" && typeof x.arrayBuffer === "function";
+}
+/* "这一条现在放得出来吗"。以前到处写的都是 m.file，路径条目没有 m.file ——
+   挨个改成这个，别漏一处（漏掉的那处表现是"点了没反应"，最难查）。 */
+function playable(m){
+  if (!m) return false;
+  if (isBlob(m.file)) return true;
+  return !!m.url;                      // 电脑端的真实文件
+}
+// 播放源。有路径就用路径（不占内存、不留副本），没有才现造一个 blob 网址。
+function mediaSrc(m){
+  if (m.url) return { src: m.url, owned: false };
+  if (isBlob(m.file)) return { src: URL.createObjectURL(m.file), owned: true };
+  return { src: "", owned: false };
+}
+
 function whereKind(){
   if (shellBridge) return "desktop";
   if (CapInfo) return "android";
@@ -9646,13 +10465,30 @@ function syncWhereUI(){
   const btn = $("btnWhere");
   const note = $("whereNote");
   btn.disabled = kind === "web";        // <button> 有 disabled 这个 IDL 属性，直接赋值就行
+  // 「更改」只有壳里那颗 pickSaveDir 在的时候才露（第二十一批第 6 项）
+  const pick = $("btnSaveDir");
+  if (pick) pick.hidden = !(kind === "desktop" && shellBridge && typeof shellBridge.pickSaveDir === "function");
   if (kind === "desktop"){
     btn.textContent = "在文件夹中显示";
     note.textContent = "正在读取位置…";
     Promise.resolve()
-      .then(() => shellBridge.userDataPath())
-      .then(p => { note.textContent = p ? `存在这台电脑上：${p}` : "存在这台电脑的软件数据目录里。"; })
+      .then(() => (typeof shellBridge.saveDir === "function" ? shellBridge.saveDir() : shellBridge.userDataPath()))
+      .then(p => { note.textContent = p
+        ? `导入的文件存在这台电脑的这个文件夹里：${p}`
+        : "存在这台电脑的软件数据目录里。"; })
       .catch(() => { note.textContent = "存在这台电脑的软件数据目录里。"; });
+    // 「导入方式」那两颗按钮和那段说明，电脑端是另一套说法 ——
+    // 那边「保存文件」= 把文件复制进上面那个文件夹（软件里不再另存一份），
+    // 「只建索引」= 压根不复制、就地引用。别端照旧。
+    const segS = $("segImportStore"), segI = $("segImportIndex"), note2 = $("impNote");
+    if (segS) segS.textContent = "复制到保存位置";
+    if (segI) segI.textContent = "直接引用原文件";
+    if (note2) note2.innerHTML =
+      `「复制到保存位置」是导入时把文件复制进上面那个文件夹，之后原文件删掉、移走都不影响听；`
+      + `<b>你原来的文件不会被改动</b>。`
+      + `「直接引用原文件」是不复制，软件只记住它在哪儿 —— 不占额外空间，`
+      + `但原文件被删、改名或移走就找不回来了。`
+      + `两种方式下，时长、标签、标记点、片段、看到哪儿、波形都是齐的。`;
   } else if (kind === "android"){
     btn.textContent = "打开应用信息";
     note.textContent = "";              // 空着不写 —— :empty 那条 CSS 会把它整个收掉
@@ -9667,11 +10503,36 @@ $("btnWhere").addEventListener("click", () => {
   const kind = whereKind();
   const fail = () => toast(kind === "android" ? "打不开应用信息页" : "打不开文件夹");
   try {
-    const r = kind === "desktop" ? shellBridge.revealUserData()
+    // 电脑端开的是**存文件的那个目录**，不是软件的数据目录 —— 从这一版起
+    // 用户的音视频就住在那儿，开数据目录等于什么都没给他看。
+    const r = kind === "desktop"
+            ? (typeof shellBridge.revealSaveDir === "function" ? shellBridge.revealSaveDir()
+                                                               : shellBridge.revealUserData())
             : kind === "android" ? CapInfo.openAppSettings()
             : null;
     if (r && r.catch) r.catch(fail);
   } catch (e){ fail(); }
+});
+
+/* 「更改」保存位置（第二十一批第 6 项）。
+   ⚠️ 路径是用户在系统对话框里选的，页面自始至终碰不到它 —— 这边只负责说
+      "换好了，要重启"，重启由主进程 app.relaunch() 干。
+   ⚠️ 换了之后**不搬旧文件**：那要挪几百 G，还得处理一半失败、盘满、权限……
+      用户要的是"以后存到别的盘去"，不是"把家搬过去"。所以提示里把这事儿说明白。 */
+$("btnSaveDir").addEventListener("click", async () => {
+  if (whereKind() !== "desktop") return;
+  try{
+    const r = await shellBridge.pickSaveDir();
+    if (!r || !r.ok){
+      if (r && r.why === "unwritable") toast("这个文件夹写不进去，换一个试试");
+      else if (r && r.why === "same")  toast("已经就是这个位置了");
+      return;
+    }
+    askConfirm("保存位置已改", `以后导入的文件会存到：${r.dir}\n\n`
+      + "重启软件之后生效。已经导入的文件留在原来的位置不动，照样能播。",
+      "立刻重启", () => { try { shellBridge.restart(); } catch (e){} });
+    cfOkSkin(false);          // 这不是破坏性操作，别穿那件珊瑚色
+  }catch(e){ toast("没能改保存位置"); }
 });
 syncWhereUI();
 
@@ -9783,13 +10644,90 @@ function restoreLastPlayed(){
   const id = store.settings.lastId;
   if (!id) return;
   const m = store.byId.get(id);
-  if (!m || !m.file) return;
+  if (!playable(m)) return;
   load(m, { autoplay:false, restore:true });
+}
+
+/* ============================================================
+   老数据搬家：把以前存在软件里的整份文件写成磁盘上的真实文件（第 6 项）
+   ---- 这一版之前，导入的东西整个躺在 IndexedDB 里。不搬的话它们永远是
+        "存在软件里"那一档：占着 C 盘、分享不了、删不干净。
+   ---- 用户口径：「自动搬过去，旧的那份会弹窗询问是否删除」。
+        所以搬完问一句，**默认答案是不删** —— 多占一份空间是小事，
+        删早了原文件又没了才是大事。不删也照样能用。
+   ⚠️ 一次只搬一个（主进程那边只有一个写流，migrate-chunk 是全局的）。
+   ⚠️ 搬完打一个记号，下次不再翻一遍 —— 用户选择"不删"的话，那些记录
+      本来也还在库里躺着，不记号的话每次开软件都要重搬一遍。
+   ============================================================ */
+const MIG_KEY = "listra.migrated.v21";
+function migrateOldFiles(){
+  if (!adoptable() || typeof shellBridge.migrateBegin !== "function") return Promise.resolve();
+  if (lsGet(MIG_KEY) === "1") return Promise.resolve();
+  const todo = store.items.filter(m => !m.path && isBlob(m.file));
+  if (!todo.length){ lsSet(MIG_KEY, "1"); return Promise.resolve(); }
+
+  toast("正在把文件搬到磁盘上…", { hold: true });
+  return (async () => {
+    const moved = [];
+    let failed = 0;
+    for (const m of todo){
+      try{
+        const b = await shellBridge.migrateBegin({ id:m.id, name:m.name, ext:"." + m.ext });
+        if (!b || !b.ok) throw new Error("begin");
+        await shareChunks(m.file, data => shellBridge.migrateChunk({ data }));
+        const e = await shellBridge.migrateEnd({ id:m.id });
+        if (!e || !e.ok) throw new Error("end");
+        m.path = e.path; m.owned = true; m.url = pathToUrl(e.path);
+        m.offline = false; m.stored = true;
+        moved.push(m);
+        saveLibrary();
+      }catch(err){ failed++; }
+    }
+    hideToast();
+    if (!moved.length){
+      if (failed) toast(`有 ${failed} 个文件没能搬到磁盘上，它们照旧存在软件里`);
+      return;
+    }
+    lsSet(MIG_KEY, "1");
+    renderAll();
+    askMigrated(moved.length, failed, moved);
+  })();
+}
+
+/* 搬完那一声问。**只有电脑端才有这一段**，而且用户点"删"之前一个字节都不动。
+   "全删"要摁住 5 秒才给按 —— 它一次抹掉几十上百个文件，比单条移除重得多。 */
+function askMigrated(done, failed, moved){
+  const extra = failed ? `还有 ${failed} 个没能搬过来，它们照旧存在软件里。` : "";
+  askConfirm("文件已经搬到磁盘上",
+    `${done} 个文件已经写成真实文件，存在「设置 · 文件位置」那个文件夹里。`
+    + `${extra}软件里原来那一份要删掉吗？删掉能把空间腾出来，不删也不影响使用，`
+    + `只是同一份东西在磁盘上占了两遍。`,
+    "全删", () => dropInnerCopies(moved), CF_HOLD_SEC);
+  // 这一颗是"建议删"，但**不删也完全没问题**，所以穿薄荷不穿珊瑚色
+  cfOkSkin(false);
+  // ⚠️ 只有一颗"全删"是不够的 —— 用户很可能想留着。这一颗取消就是"先留着"，
+  //    所以当场把它的字换掉，别让人对着一个"取消"猜会发生什么。
+  //    （askConfirm 每次开都会先写回"取消"，不会串到别的确认框上去。）
+  $("cfCancel").textContent = "先留着";
+}
+function dropInnerCopies(moved){
+  let n = 0;
+  for (const m of moved){
+    if (!m.path || !isBlob(m.file)) continue;
+    DB.del("files", m.id);
+    m.file = null; m.stored = false;
+    n++;
+  }
+  saveLibrary(); renderAll();
+  toast(`已经从软件里腾出 ${n} 份，文件照旧在「文件位置」那个文件夹里`);
 }
 
 restoreLibrary().then(ok => {
   if (!ok && pendingDir) toast("资料库还在，点「添加文件」里的「选文件夹」重新授权同一个目录就恢复");
   restoreLastPlayed();
+  /* 老数据搬家排在最后：它要读整份整份的文件，比画界面慢得多，
+     等资料库和上次那条都摆好了再慢慢搬。搬完会自己弹一句问要不要删旧的。 */
+  migrateOldFiles();
 }).catch(err => {
   // 恢复整个挂了（库读不出来之类）。这时候一个收藏夹/待播都没有，
   // 补一个空待播，至少还有块地方能放东西、能播。

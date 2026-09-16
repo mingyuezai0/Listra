@@ -50,6 +50,9 @@ public class SharePlugin extends Plugin {
     /** 收到的每一片都落在这个目录下。纯 ASCII，免得某些 ROM 的文件名编码出岔子。 */
     private static final String DIR = "listra-share";
 
+    /** 副本最长留 24 小时（第二十一批第 7 项）。 */
+    private static final long TTL_MS = 24L * 60 * 60 * 1000;
+
     private File target = null;      // 正在收的那一份
     private OutputStream os = null;
     private String mime = "application/octet-stream";
@@ -58,6 +61,42 @@ public class SharePlugin extends Plugin {
         File d = new File(getContext().getCacheDir(), DIR);
         if (!d.exists()) d.mkdirs();
         return d;
+    }
+
+    /**
+     * 超过 24 小时的副本自动清掉（第二十一批第 7 项）。
+     * 光靠 begin 里那次 clearOld 不够：分享完就把软件扔一边的用户，
+     * 那份几百兆的副本会一直躺在 cacheDir 里 —— 系统清缓存是"看它自己心情"的，
+     * 不能指望。所以每次进前台都扫一遍。
+     * ⚠️ 只按 lastModified 判，不看有没有别的应用正读着 —— 24 小时够长了，
+     *    真有人隔一天还在播那个分享出去的文件，那已经不是"临时副本"的用法。
+     */
+    private void sweep() {
+        try {
+            File[] fs = shareDir().listFiles();
+            if (fs == null) return;
+            long now = System.currentTimeMillis();
+            for (File f : fs) {
+                if (now - f.lastModified() > TTL_MS) {
+                    //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                }
+            }
+        } catch (Exception ignored) {
+            // 扫不掉就扫不掉，下一趟再来
+        }
+    }
+
+    @Override
+    public void load() {
+        super.load();
+        sweep();
+    }
+
+    @Override
+    protected void handleOnStart() {
+        super.handleOnStart();
+        sweep();
     }
 
     /** 把上一次留下的副本连同目录整个删掉。删不掉也不算错，下次 begin 还会再试。 */
