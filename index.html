@@ -29,6 +29,16 @@
   --line:#E3EFEA;
   --line-2:#F0F6F3;
   --coral:#FF6B4A;          /* 只给破坏性操作 */
+  --coral-soft:#FFEDE9;     /* 破坏性按钮悬停时垫的那层浅底 */
+
+  /* 同一个薄荷绿在界面上其实有**三种用法**，两套主题要把它们往不同方向推，
+     所以拆成三个名字。混着用的后果很具体（第二十批第 9 项）：
+     黑夜模式里 `.btn.primary:hover` 会变成白字压浅绿、`.nav-pin` 那颗图标绿得看不见。 */
+  --mint-ink:#0FA47F;       /* 薄荷色当**字/描边/图标**用。黑夜模式里要反过来变浅 */
+  --mint-chrome:#7FE3C6;    /* 压在**视频黑底**上的薄荷字。那块底两套主题一样黑，不跟着变 */
+  --wave-idle:#CFE4DC;      /* 波形里还没放到的那些柱子 */
+  --plate:#0C1A15;          /* 深色小板：提示条、进度气泡 */
+  --on-plate:#FFFFFF;
 
   --r-sm:8px; --r-md:12px; --r-lg:18px;
   --sh-1:0 1px 2px rgba(12,26,21,.05), 0 1px 3px rgba(12,26,21,.04);
@@ -53,6 +63,82 @@
   --sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
   --sal:var(--safe-area-inset-left,env(safe-area-inset-left,0px));
 }
+
+/* ============================================================
+   黑夜模式（第二十批第 9 项）—— 把白换成黑，薄荷绿不动
+   ============================================================
+   整套界面从头到尾只认上面那一组令牌，所以这里**只重写令牌**，
+   底下几百条规则一条都不用动。两个方向得分开记：
+     · --mint-100/200/300 是当**底**用的浅薄荷，黑底上要压暗；
+     · --mint-700 是当**字**用的深薄荷，黑底上要提亮。
+   搞反了就是用户说的"黑夜模式看不见字"：浅薄荷底压深薄荷字，一团糊。
+   ⚠️ --mint-500 是主色，两套主题共用 —— 动着它整个配色就不是这套了。
+   ⚠️ 对着色板改的时候记住这条：**白底上的深绿，到黑底上必须变成浅绿**。 */
+html[data-theme="dark"]{
+  /* 连浏览器自己画的那几块（原生输入控件、下拉、日期面板）一起转成深色。
+     CSS 这条盖得住 <meta name="color-scheme" content="light">。 */
+  color-scheme:dark;
+
+  --paper:#0B100E;
+  --surface:#131A17;
+  --surface-2:#101715;
+
+  --mint-100:#12241E;
+  --mint-200:#183129;
+  --mint-300:#275046;
+  --mint-500:#16C79A;
+  --mint-600:#0E9E7B;       /* 悬停时更深的那块实心（上面压白字），继续往暗里走 */
+  --mint-700:#6FE4C4;       /* 原来是浅底上的深绿字，现在得发亮 */
+  --mint-ink:#4FDDB6;
+
+  --ink:#E6EFEB;
+  --ink-2:#AFC0BA;
+  --ink-3:#7C8D87;
+
+  --line:#22302B;
+  --line-2:#1A2420;
+  --coral:#FF7B5C;
+  --coral-soft:#3A1D16;
+  --wave-idle:#2C4A41;
+
+  /* 深色小板反过来做成浅的 —— 深底上再放深板就看不见了 */
+  --plate:#E6EFEB;
+  --on-plate:#0B100E;
+
+  /* 黑底上影子要压得更黑，不然"浮起来"看着像糊了一层灰 */
+  --sh-1:0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --sh-2:0 4px 16px rgba(0,0,0,.45);
+  --sh-lift:0 8px 24px rgba(0,0,0,.55);
+  --sh-pop:0 10px 34px rgba(0,0,0,.5);
+}
+
+/* ============================================================
+   关灯模式（第二十批第 9 项）—— 清新模式外面蒙一层暗色
+   ============================================================
+   做法是**一层 fixed 的暗幕**，不是 filter：filter 挂在祖先上，
+   子树里的视频会跟着一起压暗，而要求是"视频内容不影响"。
+
+   层级 190 是挑过的：
+     · 要盖住 顶栏30 / 侧栏20 / 播放台40 / 舞台内容，以及那些下拉浮层（60~180）；
+     · 要让开 拖放层200 / 弹窗220 / 提示条300 / 锁屏350 —— 它们各带一层自己的
+       深色背板，本来就不刺眼，再蒙一层反倒把里面的字压糊。
+   视频要"不受影响"，所以把 .video-wrap 抬到暗幕上面：
+   #stage 是 position:relative 但**没有 z-index**（不构成层叠上下文），
+   所以这个 195 是在根上下文里跟 190 比的。
+   ⚠️ 只在关灯模式下抬 —— 平时抬上去会盖住唱片页那一层（150）。 */
+#dim{position:fixed;inset:0;z-index:190;background:rgba(4,10,8,.46);
+     pointer-events:none;display:none}
+body.lights-off #dim{display:block}
+body.lights-off .video-wrap{z-index:195}
+
+/* 暗幕盖不到的那两层（弹窗 220 / 锁屏 350）各自再压一遍 ——
+   不压的话，关灯模式下开个设置，最亮的东西恰好是你正在看的那块白板。
+   为什么不干脆把暗幕抬到它们上面：暗幕一抬过 220，为了"画面不受影响"就得把
+   .video-wrap 抬得更高，那样一边看视频一边开弹窗时，画面会盖在弹窗上。
+   亮度取 .55 是为了跟暗幕压出来的效果对齐（255×0.54 ≈ 138）。
+   ⚠️ 提示条（300）和拖放层（200）不压 —— 一个是通知、一个是拖拽反馈，本来就该醒目。 */
+body.lights-off .modal,
+body.lights-off #lockScreen{filter:brightness(.55)}
 
 *{box-sizing:border-box;
   /* 手机点任何一颗按钮，系统会在这块区域上闪一下半透明的蓝框。这套配色里
@@ -89,7 +175,7 @@ input{font:inherit;color:inherit}
 *:not(textarea)::-webkit-scrollbar{width:0;height:0}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .micro{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
-:focus-visible{outline:2px solid var(--mint-600); outline-offset:2px; border-radius:4px}
+:focus-visible{outline:2px solid var(--mint-ink); outline-offset:2px; border-radius:4px}
 
 /* ============================================================
    骨架
@@ -205,7 +291,7 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .nav-toggle > svg{width:12px;height:12px;flex:0 0 auto;transition:transform .18s}
 .nav-toggle[aria-expanded="true"] > svg{transform:rotate(180deg)}
 /* 钉住的那一枚小图钉。摆在名字前面，一眼看出这行为什么排在最上面。 */
-.nav-pin{flex:0 0 auto;width:12px;height:12px;color:var(--mint-600);display:grid;place-items:center}
+.nav-pin{flex:0 0 auto;width:12px;height:12px;color:var(--mint-ink);display:grid;place-items:center}
 .nav-pin svg{width:100%;height:100%}
 /* 临时待播：一次性的，放完就没了，所以图标和角标都跟普通待播分开画 */
 .nav-tag{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--ink-3);
@@ -457,7 +543,7 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 .q-del{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--ink-3);
   opacity:0;transition:opacity .15s,background .15s,color .15s;flex:0 0 auto}
 .q-row:hover .q-del,.q-row:focus-within .q-del{opacity:1}
-.q-del:hover{background:#FFEDE9;color:var(--coral)}
+.q-del:hover{background:var(--coral-soft);color:var(--coral)}
 .q-row.dragging{z-index:5;border-radius:var(--r-md);box-shadow:var(--sh-lift);
   border-color:transparent;cursor:grabbing}
 .q-row.dragging .q-grip{opacity:1}
@@ -608,7 +694,7 @@ body.pip-on .fs-ui{display:none}
   font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap;
   box-shadow:0 2px 14px rgba(0,0,0,.35);
 }
-.fs-hold b{color:var(--mint-300);font-size:18px;margin-right:6px}
+.fs-hold b{color:var(--mint-chrome);font-size:18px;margin-right:6px}
 /* 可点的提示条：默认那条是 pointer-events:none 的，带动作的这条得能点 */
 #toast .toast-act{
   margin-left:10px;padding:3px 10px;border-radius:999px;background:var(--mint-500);
@@ -651,7 +737,7 @@ body.pip-on .fs-ui{display:none}
    做成 DOM，拖动时就是连续的。 */
 .wave-knob{
   position:absolute;top:50%;left:0;width:15px;height:15px;border-radius:50%;
-  background:var(--surface);border:3px solid var(--mint-600);
+  background:var(--surface);border:3px solid var(--mint-ink);
   transform:translate(-50%,-50%);box-shadow:var(--sh-1);pointer-events:none;
   transition:width .12s,height .12s,border-color .12s;
 }
@@ -662,7 +748,7 @@ body.pip-on .fs-ui{display:none}
   /* 默认居中，否则第一次 hover 之前它趴在 left:0 上、有一半探出容器 */
   position:absolute;top:-13px;left:50%;transform:translateX(-50%);
   font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;
-  background:var(--ink);color:#fff;padding:1px 5px;border-radius:4px;
+  background:var(--plate);color:var(--on-plate);padding:1px 5px;border-radius:4px;
   opacity:0;pointer-events:none;transition:opacity .12s;
 }
 .deck-wave:hover .scrub-hint{opacity:1}
@@ -837,7 +923,7 @@ body.pip-on .fs-ui{display:none}
    这里必须把宽高收回来。 */
 .modal-box .rd-check input[type="checkbox"]{
   width:16px;height:16px;min-width:16px;margin:2px 0 0;padding:0;flex:0 0 auto;
-  accent-color:var(--mint-600);border-radius:4px;
+  accent-color:var(--mint-ink);border-radius:4px;
 }
 .rd-check > span{flex:1 1 auto;min-width:0}
 .rd-check i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3);margin-top:2px}
@@ -987,7 +1073,7 @@ body.pip-on .fs-ui{display:none}
   color:var(--ink-3);opacity:.55;transition:opacity .15s,background .15s,color .15s}
 .mk-row:hover .mk-btn{opacity:1}
 .mk-btn:hover{background:var(--mint-100);color:var(--mint-700)}
-.mk-btn.del:hover{background:#FFEDE9;color:var(--coral)}
+.mk-btn.del:hover{background:var(--coral-soft);color:var(--coral)}
 /* 片段：最前面那个开关决定它参不参加片段循环 */
 .clip-row{grid-template-columns:auto auto minmax(0,1fr) auto auto}
 .clip-on{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);
@@ -1006,7 +1092,7 @@ body.pip-on .fs-ui{display:none}
 }
 .am-item:hover{background:var(--mint-100);color:var(--mint-700)}
 .am-item .am-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
-.am-item .am-check{flex:0 0 auto;color:var(--mint-600);opacity:0}
+.am-item .am-check{flex:0 0 auto;color:var(--mint-ink);opacity:0}
 .am-item[aria-checked="true"] .am-check{opacity:1}
 .am-item[aria-checked="true"]{color:var(--mint-700);font-weight:600}
 .am-sep{height:1px;background:var(--line-2);margin:5px 8px}
@@ -1022,7 +1108,7 @@ body.pip-on .fs-ui{display:none}
   transition:background .12s,color .12s}
 .am-fold:hover{background:var(--mint-100);color:var(--mint-700)}
 .am-del{color:var(--ink-2)}
-.am-del:hover{background:#FFEDE9;color:var(--coral)}
+.am-del:hover{background:var(--coral-soft);color:var(--coral)}
 
 /* ============================================================
    筛选行（资料库音频/视频页里那两个筛子）
@@ -1238,7 +1324,7 @@ body.pip-on .fs-ui{display:none}
    光让那个小三角能点太小了，手指够不着。 */
 .cl-head{display:flex;align-items:baseline;gap:9px;width:100%;padding:2px 0;
   text-align:left;border-radius:4px}
-.cl-head:hover .cl-title{color:var(--mint-600)}
+.cl-head:hover .cl-title{color:var(--mint-ink)}
 .cl-head b{font-family:var(--mono);font-size:12px;font-weight:650;color:var(--mint-700);
   font-variant-numeric:tabular-nums}
 .cl-date{font-family:var(--mono);font-size:11px;color:var(--ink-3);
@@ -1671,6 +1757,23 @@ body.vinyl-wide #lyricBackBtn{display:none}
   font-family:var(--mono);font-size:15px;letter-spacing:.24em}
 .lock-pwd input:focus{border-color:var(--mint-500)}
 
+/* 「忘了密码」那颗：写成一句不起眼的细字 —— 它不是主按钮，不该被顺手按到；
+   可真忘了的时候得一眼找得到。 */
+.lock-forgot{margin-top:14px;padding:6px 10px;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--ink-3);text-decoration:underline;
+  text-underline-offset:3px}
+.lock-forgot:hover{color:var(--mint-ink)}
+/* 定钟点那一屏 */
+.lock-wait{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+.lock-wait-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.lock-wait-row input{width:76px;height:38px;padding:0 10px;border:1px solid var(--line);
+  border-radius:var(--r-sm);outline:none;background:var(--surface);text-align:center;
+  font-family:var(--mono);font-size:15px;color:var(--ink)}
+.lock-wait-row input:focus{border-color:var(--mint-500)}
+.lock-wait-note{margin:0;font-size:12px;color:var(--ink-3);text-align:center;line-height:1.7}
+.lock-wait-btns{display:flex;gap:9px;width:100%}
+.lock-wait-btns .btn{flex:1}
+
 /* 九宫格。九个点是绝对定位的，位置由 --px/--py 给（百分比），
    连线那一层 SVG 用的是同一套百分比坐标（viewBox 0 0 100 100 +
    preserveAspectRatio=none），所以两边永远对得上，不用在 JS 里换算像素。
@@ -1846,6 +1949,27 @@ body.vinyl-wide #lyricBackBtn{display:none}
     <div id="queueList" style="display:contents"></div>
 
     <div class="nav-foot">
+      <!-- 投送 / 教程：第二十批第 11 项先占位，功能后面做。
+           跟上面那排一样是并排两格，所以照样走 .nav-foot-row。
+           两颗都不挂 data-nav —— 它们还没有页面可开，自己接事件。 -->
+      <div class="nav-foot-row">
+        <div class="nav-item" id="navCast" role="button" tabindex="0">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6.1 2.9h7.2a1.1 1.1 0 0 1 1.1 1.1v8a1.1 1.1 0 0 1-1.1 1.1H9.4"
+                  stroke-linejoin="round"/>
+            <path d="M1.6 7.9a6.5 6.5 0 0 1 6.5 6.5" stroke-linecap="round"/>
+            <path d="M1.6 11.2a3.2 3.2 0 0 1 3.2 3.2" stroke-linecap="round"/>
+            <circle cx="1.9" cy="13.8" r=".75" fill="currentColor" stroke="none"/>
+          </svg><span class="nav-text">投送</span>
+        </div>
+        <div class="nav-item" id="navGuide" role="button" tabindex="0">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M8 4.3C6.6 3.2 4.7 2.8 1.9 3v9.3c2.8-.2 4.7.2 6.1 1.3 1.4-1.1 3.3-1.5 6.1-1.3V3C11.3 2.8 9.4 3.2 8 4.3z"
+                  stroke-linejoin="round"/>
+            <path d="M8 4.3v9.3" stroke-linecap="round"/>
+          </svg><span class="nav-text">教程</span>
+        </div>
+      </div>
       <div class="nav-foot-row">
         <div class="nav-item" data-nav="settings" id="navSettings" role="button" tabindex="0">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -2289,6 +2413,16 @@ body.vinyl-wide #lyricBackBtn{display:none}
          别漏到外面去 —— 漏出去的那一项会把「完成」顶出屏幕。 -->
     <div class="set-scroll">
     <div class="set-row">
+      <span class="set-label" id="setThemeLabel">外观</span>
+      <div class="seg" role="group" aria-labelledby="setThemeLabel">
+        <button class="seg-btn" id="segThemeFresh" aria-pressed="true">清新</button>
+        <button class="seg-btn" id="segThemeDark" aria-pressed="false">黑夜</button>
+        <button class="seg-btn" id="segThemeOff" aria-pressed="false">关灯</button>
+      </div>
+      <p class="set-note">清新是白底薄荷绿；黑夜把白底换成黑底，薄荷绿不变；
+        关灯是给清新整体蒙一层暗色，正在放的画面本身不受影响。</p>
+    </div>
+    <div class="set-row">
       <span class="set-label" id="setLayoutLabel">排列方式</span>
       <div class="seg" role="group" aria-labelledby="setLayoutLabel">
         <button class="seg-btn" id="segShelf" aria-pressed="true">
@@ -2311,7 +2445,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
         <button class="seg-btn" id="segResumeAsk" aria-pressed="false">点击跳转</button>
         <button class="seg-btn" id="segResumeSilent" aria-pressed="false">静默跳转</button>
       </div>
-      <p class="set-note">视频和一小时以上的长录音会记住上次停在哪。</p>
+      <p class="set-note">视频和音频都会记住上次停在哪，关掉软件再打开接着放。</p>
     </div>
     <div class="set-row">
       <div class="set-head">
@@ -2329,6 +2463,16 @@ body.vinyl-wide #lyricBackBtn{display:none}
         两种方式下，时长、标签、标记点、片段、看到哪儿、波形都是齐的。</p>
     </div>
     <div class="set-row">
+      <span class="set-label" id="setPickLabel">从资料库添加时</span>
+      <div class="seg" role="group" aria-labelledby="setPickLabel">
+        <button class="seg-btn" id="segPickHide" aria-pressed="true">不列已有的</button>
+        <button class="seg-btn" id="segPickAll" aria-pressed="false">全列出来</button>
+      </div>
+      <p class="set-note">收藏夹和待播里已经有的，挑的时候不再重复列一遍。</p>
+    </div>
+    <!-- 电脑端整行收起来（syncNotifUI 里 toggleAttribute）。判据用窄屏断点，
+         和上面「解锁方式」那一行是同一把尺子：通知栏 / 锁屏那块只有手机上才有。 -->
+    <div class="set-row" id="rowNotif">
       <span class="set-label" id="setNotifLabel">通知栏播放控制</span>
       <div class="seg" role="group" aria-labelledby="setNotifLabel">
         <button class="seg-btn" id="segNotifOn" aria-pressed="true">显示</button>
@@ -2350,8 +2494,8 @@ body.vinyl-wide #lyricBackBtn{display:none}
           <button class="seg-btn" id="segLockPwd" aria-pressed="false">密码</button>
         </div>
       </div>
-      <p class="set-note" id="lockNote">打开软件时要先解锁。关掉软件（不是切到后台，是彻底退出）再打开才问一次；
-        切出去再切回来不打扰。忘了密码谁也找不回来 —— 没有服务器，只能清除软件数据重来。</p>
+      <!-- 这段平时是空的，只有 crypto.subtle 用不了的那种环境才由 syncLockUI 填一句 -->
+      <p class="set-note" id="lockNote" hidden></p>
     </div>
     <div class="set-row">
       <span class="set-label" id="setWhereLabel">文件位置</span>
@@ -2454,6 +2598,10 @@ body.vinyl-wide #lyricBackBtn{display:none}
   </div>
 </div>
 
+<!-- 关灯模式那层暗幕（第二十批第 9 项）。平时 display:none，只在
+     body.lights-off 下现身；层级和"为什么视频要抬上去"都写在 <style> 那段里。 -->
+<div id="dim" aria-hidden="true"></div>
+
 <!-- 拖放遮罩 -->
 <div id="dropOverlay">
   <div class="drop-inner">
@@ -2495,9 +2643,79 @@ function fmtSize(b){
 }
 const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ============================================================
+   外观：三套主题（第二十批第 9 项）
+   ------------------------------------------------------------
+   清新 = 白 + 薄荷绿（原来那套）· 黑夜 = 白底换黑底，薄荷绿不动 ·
+   关灯 = 清新外面蒙一层暗色，视频画面不蒙。
+   三套全靠 CSS 上那两组令牌实现（见 <style> 里那两段），这里只管**挂哪个名字**。
+
+   ⚠️ 必须**在第一次画出来之前**定下来。设置存在 IndexedDB 里，那是异步的、
+     要等 restoreLibrary() 跑完才读得到 —— 黑夜模式的用户每次启动都会先闪一下白。
+     所以这儿照抄一份到 localStorage，启动时同步读（跟软件锁那条路一个道理）。
+     两份不一致时以 localStorage 为准：它才是"上次真正生效的那个"。 */
+const THEME_KEY = "tingyu.theme";
+const THEMES = ["fresh", "dark", "off"];
+function themeGet(){
+  try{
+    const v = localStorage.getItem(THEME_KEY);
+    if (v && THEMES.includes(v)) return v;
+  }catch{}
+  return "fresh";
+}
+let toneCache = {};               // canvas 用的颜色缓存（改主题时清空，见 tone()）
+/* canvas 不认 var()，想要主题里的颜色只能自己取。
+   ⚠️ 别在每帧里现调 getComputedStyle —— 波形一秒要重画好几趟。 */
+function tone(name){
+  if (!(name in toneCache)){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    toneCache[name] = v || "#000";
+  }
+  return toneCache[name];
+}
+function paintTheme(v){
+  const t = THEMES.includes(v) ? v : "fresh";
+  // 关灯用的是**清新那套颜色**，只是外面多蒙一层，所以底色仍按清新挂
+  document.documentElement.dataset.theme = t === "dark" ? "dark" : "fresh";
+  document.body.classList.toggle("lights-off", t === "off");
+  toneCache = {};                 // 令牌换过了，画布那份缓存作废
+  // 手机上那条状态栏的颜色。关灯底色是"清新被蒙了一层"，
+  // 所以填的是蒙完之后的那个值（#F6FAF8 × (1-0.46) ≈ #858886），不然状态栏会比界面亮一截。
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute("content", t === "dark" ? "#0B100E" : t === "off" ? "#858886" : "#F6FAF8");
+  // ⚠️ 这里**不**重画波形。波形是画布画的，换主题确实得重来一趟才换色，
+  //    可 drawWave 摸的 wave/canvas 都定义在下面，首屏这次 paintTheme() 跑在它们前面，
+  //    调了就是 TDZ 报错。重画那一句放在 setTheme() 里 —— 那条路只可能从设置里走。
+}
+paintTheme(themeGet());           // 首屏就得挂上，晚了会先闪一下白
 const isTouch = () => matchMedia("(hover: none) and (pointer: coarse)").matches;
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 const uid = () => Math.random().toString(36).slice(2,9);
+
+/* ---- 点浮层外面：把它收起来，但那一下不许接着点到底下的东西 ----
+   手机上最明显：菜单弹在某张卡片上，手指戳旁边想把菜单收掉，菜单是收了，
+   手指底下那张卡片同时也被点开了 —— 用户要的是"收起来"，不是"收起来顺便点一个"。
+   跟长按快进那条 holdAteClick 是同一个意思，所以名字也照着起。
+
+   做法：按下时举旗，紧接着那一发 click 在**捕获段**上吃掉。捕获段比目标元素自己
+   的监听先跑，底下的按钮根本没机会响应。
+
+   ⚠️ 旗子每次按下都先放平。程序性关层（navTo 里那几处）不举旗；就算哪一处举了，
+   下一次点击之前必然先来一次 pointerdown 把它放平，误吃不了一发。 */
+let layerAteClick = false;
+function ateClick(){ layerAteClick = true; }
+// ⚠️ 这一发必须挂在 window 的捕获段上：所有浮层的关闭监听都在 document 捕获段
+//    或元素自己身上，window 捕获永远排在它们前面 —— 先放平、后举起，顺序才对。
+addEventListener("pointerdown", () => { layerAteClick = false; }, true);
+// 按下去被系统收回（来电、手势被抢）时不会有 click，旗子得跟着放平
+addEventListener("pointercancel", () => { layerAteClick = false; }, true);
+addEventListener("click", e => {
+  if (!layerAteClick) return;
+  layerAteClick = false;
+  e.stopPropagation();
+  e.preventDefault();
+}, true);
 
 /* ============================================================
    1. IndexedDB
@@ -2652,12 +2870,15 @@ function parseFLAC(buf, dv){
   return out;
 }
 
-// MP4 / M4A / MOV 的封面藏在 moov > udta > meta > ilst > covr > data 里。
+// MP4 / M4A / MOV 的封面和歌词都藏在 moov > udta > meta > ilst 里。
 // 注意 meta 是 FullBox，子盒子前面多 4 个字节的版本号 + flags，别当成普通盒子走。
-function parseMP4(buf, dv){
-  if (buf.byteLength < 12) return null;
+//
+// ⚠️ moov **不保证在文件开头**：转码器不加 faststart 的话，它会整块压在文件尾巴上，
+//    前 1MB 里连影子都没有 —— 歌词和封面跟着一起丢（第二十批第 7 项）。
+//    第三个参数是调用方已经定位好的 moov（偏移相对 buf）；不传就假定 buf
+//    是文件开头、自己找。这段里没有 moov 就返回 null，让调用方去后面翻。
+function parseMP4(buf, dv, moov){
   const tag = p => String.fromCharCode(dv.getUint8(p), dv.getUint8(p+1), dv.getUint8(p+2), dv.getUint8(p+3));
-  if (tag(4) !== "ftyp") return null;
 
   function findBox(start, end, name){
     let p = start;
@@ -2675,8 +2896,13 @@ function parseMP4(buf, dv){
     return null;
   }
 
+  if (!moov){
+    if (buf.byteLength < 12 || tag(4) !== "ftyp") return null;
+    moov = findBox(0, buf.byteLength, "moov");
+    if (!moov) return null;                 // 这段里没有，调用方去后面找
+  }
+
   const out = {};
-  const moov = findBox(0, buf.byteLength, "moov");   if (!moov) return out;
   const udta = findBox(moov.start, moov.end, "udta"); if (!udta) return out;
   const meta = findBox(udta.start, udta.end, "meta"); if (!meta) return out;
   const ilst = findBox(meta.start + 4, meta.end, "ilst"); if (!ilst) return out;
@@ -2708,20 +2934,82 @@ function tagsFromName(name){
   return { title: base };
 }
 
+/* FLAC 的元数据块从偏移 4 起一块接一块，最后一块的最高位是 1。
+   一块一块量过去（每块只读 4 个字节的头），量出整个元数据区到哪儿为止。
+   —— 歌词（VORBIS_COMMENT）和封面（PICTURE）的先后是自由的，一张 1.5MB 的碟图
+   排在前面就能把歌词顶到 1MB 之外，所以不能靠"读前 1MB"碰运气（第二十批第 7 项）。 */
+async function flacMetaEnd(file){
+  let p = 4;
+  for (let guard = 0; guard < 256 && p + 4 <= file.size; guard++){
+    const h = new DataView(await file.slice(p, p + 4).arrayBuffer());
+    if (h.byteLength < 4) return 0;
+    const last = (h.getUint8(0) & 0x80) !== 0;
+    const len = (h.getUint8(1) << 16) | (h.getUint8(2) << 8) | h.getUint8(3);
+    p += 4 + len;
+    if (last) return Math.min(p, file.size);
+  }
+  return 0;
+}
+
+/* 顺着 MP4 的顶层盒子一路走过去找 moov。每个头只读 16 个字节 ——
+   mdat 动辄几百 MB，整段读进来会当场吃爆内存。
+   找不着（或者第一个盒子就不是 ftyp）就返回 null。 */
+async function findMoovRange(file){
+  let p = 0;
+  for (let guard = 0; guard < 64 && p + 8 <= file.size; guard++){
+    const h = new DataView(await file.slice(p, p + 16).arrayBuffer());
+    if (h.byteLength < 8) return null;
+    let size = h.getUint32(0), head = 8;
+    if (size === 1){                                        // 64 位长度
+      if (h.byteLength < 16) return null;
+      size = Number(h.getBigUint64(8)); head = 16;
+    } else if (size === 0) size = file.size - p;
+    if (size < head) return null;
+    const name = String.fromCharCode(h.getUint8(4), h.getUint8(5), h.getUint8(6), h.getUint8(7));
+    if (guard === 0 && name !== "ftyp") return null;         // 压根不是 MP4
+    // ⚠️ 返回的是**盒子里头**那一段（跳过它自己的头），跟 findBox() 一个约定 ——
+    //    返回整个盒子的花，调用方再按"找子盒"去扫，第一个撞上的就是 moov 自己。
+    if (name === "moov") return { start:p + head, end:Math.min(p + size, file.size) };
+    p += size;
+  }
+  return null;
+}
+
 async function readTags(file){
   let tags = null;
   try{
-    // 封面就压在标签体里，一整张碟图能有好几 MB。固定读前 1MB 会正好把封面切成两半，
-    // 所以先读 10 个字节的 ID3 头问出标签有多长，再按那个长度去读。
+    // 封面和歌词都压在标签体里，一整张碟图能有好几 MB。固定读前 1MB 会正好把它切成两半，
+    // 所以先读 10 个字节的头闻一下是什么格式，再按那个格式的规矩去量该读多长。
     let need = Math.min(file.size, 1 << 20);
     const h10 = new DataView(await file.slice(0, 10).arrayBuffer());
-    if (h10.byteLength === 10 && h10.getUint8(0) === 0x49 && h10.getUint8(1) === 0x44 && h10.getUint8(2) === 0x33){
+    const tagAt = p => h10.byteLength >= p + 4
+      ? String.fromCharCode(h10.getUint8(p), h10.getUint8(p+1), h10.getUint8(p+2), h10.getUint8(p+3)) : "";
+    const isID3  = h10.byteLength === 10 && tagAt(0) === "ID3";
+    const isFLAC = tagAt(0) === "fLaC";
+    const isMP4  = tagAt(4) === "ftyp";
+
+    if (isID3){
+      // ID3 头里写着标签体有多长，按那个长度重读一遍
       const sz = ((h10.getUint8(6)&0x7f)<<21)|((h10.getUint8(7)&0x7f)<<14)|((h10.getUint8(8)&0x7f)<<7)|(h10.getUint8(9)&0x7f);
       need = Math.min(file.size, 10 + sz, 24 << 20);
+    } else if (isFLAC){
+      const end = await flacMetaEnd(file);
+      if (end > need && end <= (32 << 20)) need = end;       // 元数据区整段读进来
     }
-    const head = await file.slice(0, need).arrayBuffer();
-    const dv = new DataView(head);
+
+    let head = await file.slice(0, need).arrayBuffer();
+    let dv = new DataView(head);
     tags = parseID3(head, dv) || parseFLAC(head, dv) || parseMP4(head, dv);
+
+    /* MP4 的 moov 要是压在文件尾巴上，前面这一趟连 moov 都找不着（parseMP4 返回 null）。
+       那就走过去看看它到底在哪儿，只把 moov 那一段单独读进来再解析一次。 */
+    if (!tags && isMP4){
+      const moov = await findMoovRange(file);
+      if (moov){
+        const mb = await file.slice(moov.start, moov.end).arrayBuffer();
+        tags = parseMP4(mb, new DataView(mb), { start:0, end:mb.byteLength });
+      }
+    }
   }catch{ tags = null; }
   const fb = tagsFromName(file.name);
   return {
@@ -2769,6 +3057,10 @@ const store = {
     resume: "auto",                    // auto = 自动跳转 · ask = 点击跳转 · silent = 静默跳转
     importMode: "store",               // store = 把文件也存进软件一份 · index = 只记索引，本体留在原地
     importNoticeSeen: false,           // 「导入会另存一份」那条说明弹过没有（只弹一次）
+    /* 外观（第二十批第 9 项）：fresh = 清新 · dark = 黑夜 · off = 关灯。
+       真正的"谁说了算"是 localStorage 里那份（见 paintTheme 上头那段），
+       这份只是备份 —— 清了网站数据之后还能把外观捞回来。 */
+    theme: "fresh",
     mediaSession: true,                // 手机下拉通知栏 / 锁屏上那条听雨的播放控制
     // 侧栏两个大项收起/展开。默认都收起 —— 夹子多了侧栏会顶满，
     // 而资料库和设置就在同一列里，被挤下去就点不到了。
@@ -3179,7 +3471,7 @@ function closeDup(v){
 $("dupCancel").addEventListener("click", () => closeDup("cancel"));
 $("dupKeep").addEventListener("click",   () => closeDup("keep"));
 $("dupOver").addEventListener("click",   () => closeDup("overwrite"));
-$("dupModal").addEventListener("pointerdown", e => { if (e.target === $("dupModal")) closeDup("cancel"); });
+$("dupModal").addEventListener("pointerdown", e => { if (e.target === $("dupModal")){ ateClick(); closeDup("cancel"); } });
 
 /* 「导入会另存一份」这条说明，第一次导入时弹一次就够了。
    再弹就是骚扰；但这条信息本身要常驻，所以设置面板里那段说明永久留着。 */
@@ -3195,7 +3487,10 @@ $("ntOk").addEventListener("click", () => { $("noticeModal").hidden = true; });
 async function addFiles(files, { silent = false } = {}){
   const list = [], reviving = [];
   let dupes = 0, unknown = 0;
-  for (const f of files){
+  /* for await 而不是 for of：安卓上"选文件夹"拿到的是一串**还没读进来**的
+     文件（见 androidFolderFiles），读一个才有一个 —— 那边不像电脑上，File
+     是个懒句柄，不读就是零字节。数组照样吃得下 for await，网页端一个字没变。 */
+  for await (const f of files){
     if (!f || typeof f.name !== "string"){ unknown++; continue; }
     const kind = kindOf(f.name);
     if (!kind){ unknown++; continue; }
@@ -3417,7 +3712,16 @@ async function restoreLibrary(){
     if (st.layout === "shelf" || st.layout === "list") store.settings.layout = st.layout;
     if (RESUME_MODES.includes(st.resume)) store.settings.resume = st.resume;
     if (IMPORT_MODES.includes(st.importMode)) store.settings.importMode = st.importMode;
+    // 默认是"不列已有的"，所以判据写 === true：老存档里没这个键，
+    // 用 !!st.pickerAll 读出来还是 false，结果一样，但写清楚省得下回看糊涂。
+    store.settings.pickerAll = st.pickerAll === true;
     store.settings.importNoticeSeen = !!st.importNoticeSeen;
+    if (THEMES.includes(st.theme)){
+      store.settings.theme = st.theme;
+      // 首屏用的是 localStorage 那份（只有它来得及同步读）。它要是空的不认的，
+      // 才拿库里这份补挂一次 —— 清了网站数据、资料库还在的那种情况。
+      if (!THEMES.includes(lsGet(THEME_KEY) || "")) paintTheme(st.theme);
+    }
     // 布尔开关的默认值是 true，所以判据得写 !== false：老存档里压根没这个键，
     // 用 !!st.mediaSession 会把"没关过"读成"关掉了"，升级上来的人通知栏就没了。
     store.settings.mediaSession = st.mediaSession !== false;
@@ -3684,6 +3988,7 @@ const ICON_PLAY  = `<svg width="15" height="15" viewBox="0 0 16 16" fill="curren
 const ICON_PENCIL = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.3 2.5a1.55 1.55 0 0 1 2.2 2.2L5.7 12.5l-2.9.7.7-2.9z" stroke-linejoin="round"/></svg>`;
 const ICON_TRASH  = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5 5.2 13h5.6l.7-8.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const ICON_INFO   = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.1"/><path d="M8 7.2v4.2" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".85" fill="currentColor" stroke="none"/></svg>`;
+const ICON_SHARE  = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10.4V2.3" stroke-linecap="round"/><path d="M5.2 5.1 8 2.3l2.8 2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.6 9.1v3.3a1.5 1.5 0 0 0 1.5 1.5h5.8a1.5 1.5 0 0 0 1.5-1.5V9.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 /* ⚠️ 每个新图标都得带 width/height 特性。SVG 没有尺寸特性时的默认尺寸是 300×150，
    放进 flex 行里会把旁边的文字挤成一个字加省略号（按钮上写着"手…"就是这么来的）。 */
 // 钉住：一枚斜着的小图钉，摆在名字前面
@@ -4639,7 +4944,8 @@ function tickPlayed(){
   if (d > 0 && d < 1.5){ m.played = (m.played || 0) + d; bumpHistory(m.id, "s", d); statsDirty = true; }
 }
 // 攒着的累计时长得有个落盘点。savePos() 那条路带不动它 ——
-// 短音频 posWorthy 为假，压根不会走到落盘那一步。
+// 它半路有好几个 return（不到 5 秒、五秒节流、挪了不到一秒），
+// 累计时长一旦攒在那里就再没别的机会落盘了。
 function flushStats(){
   // 两个旗子各管各的：播放历史是另存的一个键，别让"累计时长没变"把它一起按下去
   if (!statsDirty && !historyDirty) return;
@@ -5073,8 +5379,10 @@ document.addEventListener("pointerdown", e => {
   // 弹窗（起名、确认）是浮在面板上面的。在里面点「确定」不该顺手把面板也收了。
   if (t.closest(".modal")) return;
   // 全屏里那颗也是"开合开关"，点它不算点到外面
-  if (!rulePanel.hidden && !rulePanel.contains(t) && !t.closest("#btnRules") && !t.closest("#fsRules")) closeRulePanel();
-  if (!markPanel.hidden && !markPanel.contains(t) && !t.closest("#btnMarks")) closeMarkPanel();
+  let closed = false;
+  if (!rulePanel.hidden && !rulePanel.contains(t) && !t.closest("#btnRules") && !t.closest("#fsRules")){ closeRulePanel(); closed = true; }
+  if (!markPanel.hidden && !markPanel.contains(t) && !t.closest("#btnMarks")){ closeMarkPanel(); closed = true; }
+  if (closed) ateClick();
 }, true);
 addEventListener("resize", () => {
   if (!rulePanel.hidden) placeUp(rulePanel, ruleAnchor());
@@ -5195,7 +5503,7 @@ function askConfirm(title, text, okLabel, onOk){
 function closeConfirm(){ $("confirmModal").hidden = true; pendingConfirm = null; }
 $("cfCancel").addEventListener("click", closeConfirm);
 $("cfOk").addEventListener("click", () => { const fn = pendingConfirm; closeConfirm(); fn?.(); });
-$("confirmModal").addEventListener("pointerdown", e => { if (e.target === $("confirmModal")) closeConfirm(); });
+$("confirmModal").addEventListener("pointerdown", e => { if (e.target === $("confirmModal")){ ateClick(); closeConfirm(); } });
 
 /* ============================================================
    6f. 全屏浮标
@@ -5361,25 +5669,24 @@ videoWrap.addEventListener("pointercancel", holdEnd);
 
 /* ============================================================
    6g. 接着上次看 —— 进度保存
-   ---- 只记视频和一小时以上的长录音。三分钟的曲子不需要"上次听到 1:47"，
-        那不是帮忙，是碍事：想听就从头听。
+   ---- 什么都记：视频、长录音、三分钟的曲子一视同仁（第二十批第 2 项）。
+        原先只记视频和一小时以上的长录音，结果是"关掉再打开，播放台上那条还在、
+        进度却是 0"—— 普通曲子根本走不到落盘那一步。
+        "三分钟的曲子不需要记住听到哪"这个判断改由用户自己做：设置里那三档
+        （自动跳 / 点击跳 / 静默跳）就是给他调的，不该在这里替他砍掉。
    ============================================================ */
 const RESUME_MODES = ["auto", "ask", "silent"];   // 自动跳转 / 点击跳转 / 静默跳转
-const LONG_AUDIO = 3600;   // 秒。这么长的音频才配记进度（有声书、讲座、录音）
 const POS_MIN  = 5;        // 秒。不到这个数等于没看过
 const POS_TAIL = 15;       // 秒。离结尾这么近就当看完了，下次从头
 const POS_EVERY = 5000;    // 毫秒。平时五秒落一次盘，暂停/切歌/关页面时立刻补一次
 let posSavedAt = 0;
 
 const resumeMode = () => RESUME_MODES.includes(store.settings.resume) ? store.settings.resume : "auto";
-// d 传进来是因为刚加载时 m.duration 可能还是 0，而 el.duration 已经量出来了
-const posWorthy = (m, d) => !!m && (m.kind === "video" || (d || m.duration || 0) >= LONG_AUDIO);
 
 function savePos(force){
   const m = player.current;
   if (!m) return;
   const d = activeEl.duration || m.duration || 0;
-  if (!posWorthy(m, d)) return;
   const t = activeEl.currentTime;
   if (!isFinite(t)) return;
   if (d && t > d - POS_TAIL){ clearPos(m); return; }   // 都快放完了，下次老老实实从头
@@ -5409,7 +5716,7 @@ function applyResume(el){
   const m = player.current;
   if (!m || !m.pos) return;
   const d = isFinite(el.duration) ? el.duration : 0;
-  if (!posWorthy(m, d) || m.pos < POS_MIN || (d && m.pos > d - POS_TAIL)){ m.pos = 0; return; }
+  if (m.pos < POS_MIN || (d && m.pos > d - POS_TAIL)){ m.pos = 0; return; }
   const t = m.pos;
   const jump = () => { el.currentTime = t; };
   if (quiet){ jump(); return; }
@@ -5507,8 +5814,8 @@ function drawWave(){
 
   if (!wave.peaks){
     const railH = Math.max(3, 4*dpr), y = mid - railH/2;
-    ctx2d.fillStyle = "#E3EFEA"; ctx2d.fillRect(0, y, W, railH);
-    ctx2d.fillStyle = "#16C79A"; ctx2d.fillRect(0, y, W*prog, railH);
+    ctx2d.fillStyle = tone("--line"); ctx2d.fillRect(0, y, W, railH);
+    ctx2d.fillStyle = tone("--mint-500"); ctx2d.fillRect(0, y, W*prog, railH);
     return;
   }
   const n = wave.peaks.length;
@@ -5519,10 +5826,12 @@ function drawWave(){
   const barW = Math.max(1, bw - gap);
   const minH = 2*dpr;
   const cut = prog * W;
+  /* 颜色在循环**外面**取一次 —— tone() 自己有缓存，但 720 根柱子挨个问一遍也是白搭 */
+  const cutColor = tone("--mint-500"), idleColor = tone("--wave-idle");
   for (let i = 0; i < n; i++){
     const x = i * bw + gap/2;
     const h = Math.max(minH, wave.peaks[i] * (H - 8*dpr));
-    ctx2d.fillStyle = (x + barW/2) <= cut ? "#16C79A" : "#CFE4DC";
+    ctx2d.fillStyle = (x + barW/2) <= cut ? cutColor : idleColor;
     ctx2d.fillRect(x, mid - h/2, barW, h);
   }
 }
@@ -5962,7 +6271,7 @@ $("btnMute").addEventListener("click", () => {
 // 手机端点到别处就收起滑杆
 addEventListener("pointerdown", e => {
   if (!$("vol").classList.contains("open")) return;
-  if (!$("vol").contains(e.target)) $("vol").classList.remove("open");
+  if (!$("vol").contains(e.target)){ ateClick(); $("vol").classList.remove("open"); }
 }, true);
 
 $("btnPlay").addEventListener("click", togglePlay);
@@ -6351,7 +6660,7 @@ $("nmInput").addEventListener("keydown", e => {
   if (e.key === "Enter"){ e.preventDefault(); $("nmOk").click(); }
   if (e.key === "Escape"){ e.preventDefault(); closeName(); }
 });
-$("nameModal").addEventListener("pointerdown", e => { if (e.target === $("nameModal")) closeName(); });
+$("nameModal").addEventListener("pointerdown", e => { if (e.target === $("nameModal")){ ateClick(); closeName(); } });
 
 $("addColl").addEventListener("click", () => askName("新建收藏夹", "", name => {
   const c = newColl(name);
@@ -6642,7 +6951,7 @@ $("editModal").addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); $("edOk").click(); }
   if (e.key === "Escape"){ e.preventDefault(); closeEdit(); }
 });
-$("editModal").addEventListener("pointerdown", e => { if (e.target === $("editModal")) closeEdit(); });
+$("editModal").addEventListener("pointerdown", e => { if (e.target === $("editModal")){ ateClick(); closeEdit(); } });
 
 // 详情是只读的，和编辑分成两个（用户明确要求）。这里要回答的是
 // "这条到底在哪些收藏夹和待播里"，所以每个能点的一行都直接跳过去。
@@ -6694,7 +7003,7 @@ function openInfo(m){
 function closeInfo(){ $("infoModal").hidden = true; }
 $("inOk").addEventListener("click", closeInfo);
 $("infoModal").addEventListener("keydown", e => { if (e.key === "Escape"){ e.preventDefault(); closeInfo(); } });
-$("infoModal").addEventListener("pointerdown", e => { if (e.target === $("infoModal")) closeInfo(); });
+$("infoModal").addEventListener("pointerdown", e => { if (e.target === $("infoModal")){ ateClick(); closeInfo(); } });
 
 // 「听了 3 遍 · 累计 1 小时 12 分」。秒数很小时只报秒 —— 报成「0 小时 0 分」
 // 等于什么都没说，那是刚点开还没听的样子。
@@ -6787,6 +7096,23 @@ function setResume(v){
 }
 for (const k in RESUME_SEG) $(RESUME_SEG[k]).addEventListener("click", () => setResume(k));
 
+/* ---- 外观：清新 / 黑夜 / 关灯（第二十批第 9 项）----
+   真身是脚本开头那个 paintTheme()；这里只管"存哪一份、哪颗按钮亮着"。 */
+const THEME_SEG = { fresh:"segThemeFresh", dark:"segThemeDark", off:"segThemeOff" };
+const themeNow = () => THEMES.includes(store.settings.theme) ? store.settings.theme : themeGet();
+function syncThemeUI(){
+  for (const k in THEME_SEG) $(THEME_SEG[k]).setAttribute("aria-pressed", String(themeNow() === k));
+}
+function setTheme(v){
+  if (!THEMES.includes(v) || themeNow() === v) return;
+  store.settings.theme = v;
+  try{ localStorage.setItem(THEME_KEY, v); }catch{}   // 下次启动要能同步读到的就是这一份
+  paintTheme(v);
+  drawWave();                                        // 波形画在 canvas 上，令牌换了得重来一趟
+  syncThemeUI(); saveLibrary();
+}
+for (const k in THEME_SEG) $(THEME_SEG[k]).addEventListener("click", () => setTheme(k));
+
 /* ---- 导入方式：存一份 / 只建索引 ---- */
 const IMPORT_MODES = ["store", "index"];
 const importMode = () => IMPORT_MODES.includes(store.settings.importMode) ? store.settings.importMode : "store";
@@ -6802,6 +7128,20 @@ function setImportMode(v){
 }
 for (const k in IMPORT_SEG) $(IMPORT_SEG[k]).addEventListener("click", () => setImportMode(k));
 
+/* ---- 从资料库添加：已在那一列里的列不列出来（第二十批第 4 项） ---- */
+const pickerAll = () => store.settings.pickerAll === true;
+const PICK_SEG = { hide:"segPickHide", all:"segPickAll" };
+function syncPickUI(){
+  for (const k in PICK_SEG) $(PICK_SEG[k]).setAttribute("aria-pressed", String(pickerAll() === (k === "all")));
+}
+function setPickerAll(v){
+  const all = v === "all";
+  if (pickerAll() === all) return;
+  store.settings.pickerAll = all;
+  syncPickUI(); saveLibrary();
+}
+for (const k in PICK_SEG) $(PICK_SEG[k]).addEventListener("click", () => setPickerAll(k));
+
 // 「导入方式」那段说明收在「？」后面。收起来不等于藏起来 —— 问号一直在那儿，
 // 想看随时点。每次开设置都回到收起态：段是"看过一次就够"的东西。
 function setImpHelp(open){
@@ -6814,6 +7154,10 @@ $("impHelp").addEventListener("click", () => setImpHelp($("impNote").hidden));
 const NOTIF_SEG = { on:"segNotifOn", off:"segNotifOff" };
 function syncNotifUI(){
   for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).setAttribute("aria-pressed", String(notifOn() === (k === "on")));
+  // 电脑端没有通知栏 / 锁屏那一条，整行收掉（第二十批第 5 项）。
+  // 判据和旁边「解锁方式」那一行一样用窄屏断点 —— 开窗够窄的电脑会看见它，
+  // 但那是全项目统一的"电脑端 / 手机端"尺子，不另立一把。
+  $("rowNotif").toggleAttribute("hidden", !narrow());
 }
 function setNotif(v){
   const on = v === "on";
@@ -6849,8 +7193,43 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch{ return null; } }
 function lsSet(k, v){ try{ localStorage.setItem(k, v); return true; }catch{ return false; } }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch{} }
 
-/* 锁的状态。salt/hash 只在要验证的时候用得上；界面只关心 on 和 mode。 */
-let lock = { on:false, mode:"pattern", salt:"", hash:"" };
+/* 锁的状态。salt/hash 只在要验证的时候用得上；界面只关心 on 和 mode。
+   until：忘了密码时定下的"等够这么久就自动关"（毫秒时间戳，0 = 没定）。
+   ---- 第二十批第 8 项。没有服务器、也没有"找回密码"，那忘了密码就是死路一条；
+        现在给一条**只能等**的路：在锁屏上定一个钟点，到点了软件锁自己卸掉。
+        这条路不需要密码 —— 要密码就不叫忘了密码了，所以它天生是"拖延"而不是"验证"，
+        底线靠两条守住：最短 1 小时，以及已经等着的那一把只许往短里改（见 lockArmWait）。 */
+let lock = { on:false, mode:"pattern", salt:"", hash:"", until:0 };
+let lockTimer = 0;
+let lockExpired = false;         // 这次开机是不是"等着等着到点了"
+
+// 还差几个小时（向上取整，最少报 1 —— 剩 3 分钟写"还有 0 小时"等于没说）
+function lockLeftHours(){
+  if (!lock.on || !lock.until) return 0;
+  const ms = lock.until - Date.now();
+  return ms <= 0 ? 0 : Math.max(1, Math.ceil(ms / 3600e3));
+}
+/* 到点了：整个卸掉。清了就真没了 —— 下次打开不再拦人，
+   得自己去设置里重新设一遍（用户口径里就是这么说的）。 */
+function lockExpire(){
+  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0 };
+  lsDel(LOCK_KEY);
+  lockExpired = true;
+  syncLockUI();
+}
+/* 边跑边盯着。锁屏开着的时候人可能就坐在那儿等，到点了要当场放行，
+   不能等到下一次重开软件。没定钟点、或者锁已经关了，就什么都不做。 */
+function armLockTimer(){
+  clearInterval(lockTimer); lockTimer = 0;
+  if (!lock.on || !lock.until) return;
+  lockTimer = setInterval(() => {
+    if (Date.now() < lock.until) return;
+    clearInterval(lockTimer); lockTimer = 0;
+    lockExpire();
+    lockUnlocked();
+    toast("软件锁到点关了。想接着用就在设置里重新设一个");
+  }, 20000);
+}
 
 function lockLoad(){
   const raw = lsGet(LOCK_KEY);
@@ -6860,13 +7239,17 @@ function lockLoad(){
     if (o && o.on && o.hash && o.salt){
       lock = { on:true,
                mode: o.mode === "password" ? "password" : "pattern",
-               salt: String(o.salt), hash: String(o.hash) };
+               salt: String(o.salt), hash: String(o.hash),
+               until: Number(o.until) || 0 };
     }
   }catch{}                       // 读坏了当没锁 —— 总比把用户关在外面强
+  // 关着软件的那段时间也算数：重开时一看已经过点了，直接不锁
+  if (lock.on && lock.until && Date.now() >= lock.until) lockExpire();
 }
 function lockSave(){
   if (!lock.on){ lsDel(LOCK_KEY); return true; }
-  return lsSet(LOCK_KEY, JSON.stringify({ on:true, mode:lock.mode, salt:lock.salt, hash:lock.hash }));
+  return lsSet(LOCK_KEY, JSON.stringify({ on:true, mode:lock.mode,
+                                          salt:lock.salt, hash:lock.hash, until:lock.until || 0 }));
 }
 
 async function lockDigest(text, salt){
@@ -6967,17 +7350,24 @@ function lockShake(){
   void b.offsetWidth;                 // 逼一次重排，不然连输错两次第二下不抖
   b.classList.add("shake");
 }
+/* 「忘了密码」那颗。它**不是**找回密码 —— 是"我认了，等够时间让你自己关"。
+   所以文案要把话说死：等待期间谁都进得去，没有第二条路。 */
+const lockForgotHTML = () => `<button class="lock-forgot" id="lockForgot" type="button">忘了密码？</button>`;
+
+const LOCK_WAIT_MIN = 1;      // 小时。再短就等于没锁，所以垫一个下限
+const LOCK_WAIT_MAX = 720;    // 小时（一个月）。再多不如干脆清数据重来
+
 function showLock(){
   lockTries = 0;
   const pw = lock.mode === "password";
   lockHint(pw ? "输入密码解锁" : "连点至少 " + LOCK_MIN + " 个点解锁", false);
-  $("lockBody").innerHTML = pw
+  $("lockBody").innerHTML = (pw
     ? `<div class="lock-pwd">
          <input id="lockPwdIn" type="password" autocomplete="off" inputmode="text"
                 aria-label="密码" placeholder="密码">
          <button class="btn primary" id="lockGo">解锁</button>
        </div>`
-    : padHTML("lockPad");
+    : padHTML("lockPad")) + lockForgotHTML();
   if (pw){
     $("lockGo").addEventListener("click", () => lockTryPwd($("lockPwdIn").value));
     $("lockPwdIn").addEventListener("keydown", e => {
@@ -6990,7 +7380,56 @@ function showLock(){
       lockTryPwd(seq.join(""));
     });
   }
+  $("lockForgot").addEventListener("click", lockForgetPanel);
   $("lockScreen").hidden = false;
+}
+
+/* 定钟点的那一屏。已经有一把在等着的话，预填和上限都跟着它走 ——
+   已经等掉的时间不能被"重新定一次"抹掉（见 lockArmWait）。 */
+function lockForgetPanel(){
+  const left = lockLeftHours();
+  lockHint("没有别的路了，只能等 —— 等够了软件锁自己关掉", false);
+  $("lockBody").innerHTML = `
+    <div class="lock-wait">
+      <div class="lock-wait-row">
+        <span>等</span>
+        <input id="lockWaitIn" type="number" inputmode="numeric" step="1"
+               min="${LOCK_WAIT_MIN}" max="${left || LOCK_WAIT_MAX}"
+               value="${left || 24}" aria-label="等多少小时">
+        <span>小时</span>
+      </div>
+      <p class="lock-wait-note" id="lockWaitNote">这段时间里谁都进得去。到点后软件锁自己关掉，想接着用得去设置里重新设一个。</p>
+      <div class="lock-wait-btns">
+        <button class="btn" id="lockWaitBack" type="button">再想想</button>
+        <button class="btn primary" id="lockWaitGo" type="button">就这么定</button>
+      </div>
+    </div>`;
+  $("lockWaitBack").addEventListener("click", showLock);
+  $("lockWaitGo").addEventListener("click", lockArmWait);
+}
+function lockArmWait(){
+  const el = $("lockWaitIn"), note = $("lockWaitNote");
+  let h = Math.round(Number(el && el.value));
+  if (!isFinite(h) || !h) h = 0;
+  if (h < LOCK_WAIT_MIN || h > LOCK_WAIT_MAX){
+    note.textContent = `只能是 ${LOCK_WAIT_MIN} 到 ${LOCK_WAIT_MAX} 小时。`;
+    return;
+  }
+  /* ⚠️ 已经有一把在等着的话，只许往**早**里改。
+     不然"定一小时 → 到点前再定一小时"就能无限往后拖，等于一键绕过。
+     ⚠️ 比的是**两个钟点**，不是两个"几小时"：剩余不足一小时时 lockLeftHours()
+        向上取整会报 1，而 1 又正好等于下限 —— 拿小时数当闸，"1 小时"这一档
+        永远过得去，等于没闸。 */
+  const deadline = Date.now() + h * 3600e3;
+  if (lock.until && deadline > lock.until){
+    note.textContent = "已经等着的那一把不能往后拖 —— 最早也只能定在它原来那个钟点。";
+    return;
+  }
+  lock.until = deadline;
+  if (!lockSave()){ note.textContent = "这个环境存不下，定不了。"; return; }
+  armLockTimer();
+  showLock();
+  lockHint(`定在 ${h} 小时后自动关掉软件锁`, false);
 }
 function lockBad(msg){
   lockTries++;
@@ -7026,10 +7465,19 @@ function syncLockUI(){
   // 电脑端只有密码 —— 这一行整个收起来。判据用的是窄屏断点，
   // 和全项目"电脑端 / 手机端"是同一把尺子（见 narrow()）。
   $("lockModeRow").toggleAttribute("hidden", !narrow());
-  $("lockNote").textContent = lockReady()
-    ? "打开软件时要先解锁。关掉软件（不是切到后台，是彻底退出）再打开才问一次；"
-      + "切出去再切回来不打扰。忘了密码谁也找不回来 —— 没有服务器，只能清除软件数据重来。"
-    : "这个环境不支持加密（crypto.subtle 不可用），软件锁打不开。";
+  // 这一段只剩两种要说的情况。原来那段"忘了密码谁也找不回来"的说明
+  // 按第二十批第 6 项删掉，并且第 8 项给忘记密码补了一条真的出路。
+  const note = $("lockNote");
+  if (!lockReady()){
+    note.hidden = false;
+    note.textContent = "这个环境不支持加密（crypto.subtle 不可用），软件锁打不开。";
+    return;
+  }
+  // 忘了密码、在锁屏上定了钟点的话，倒计时得让人看得见 ——
+  // 不然"锁怎么还不关"没有任何地方能回答。没定钟点这一行就是空的。
+  const left = lockLeftHours();
+  note.hidden = !left;
+  if (left) note.textContent = `忘了密码等自动关：还有约 ${left} 小时。到点后软件锁会自己关掉，到时候在这儿重新设一个。`;
 }
 
 /* 设置流程：密码输两遍 / 九宫格画两遍，两遍一样才落盘。
@@ -7081,6 +7529,8 @@ async function commitLock(text){
   lock.salt = newSalt();
   lock.hash = await lockDigest(text, lock.salt);
   lock.on = true;
+  lock.until = 0;              // 新设的锁不欠谁时间，原来那个钟点作废
+  armLockTimer();
   if (!lockSave()){
     lock.on = false;
     toast("这个环境存不下锁，没设成");
@@ -7103,12 +7553,13 @@ $("lkOk").addEventListener("click", async () => {
   }
 });
 $("lkCancel").addEventListener("click", closeLockSet);
-$("lockModal").addEventListener("pointerdown", e => { if (e.target === $("lockModal")) closeLockSet(); });
+$("lockModal").addEventListener("pointerdown", e => { if (e.target === $("lockModal")){ ateClick(); closeLockSet(); } });
 
 function setLockOn(on){
   if (on === lockOn()) return;
   if (on){ openLockSet(); return; }       // 开 = 先设一遍，设成了才算开
-  lock = { on:false, mode:lock.mode, salt:"", hash:"" };
+  lock = { on:false, mode:lock.mode, salt:"", hash:"", until:0 };
+  armLockTimer();                         // 手动关掉的，那个钟点也一并作废
   lockSave(); syncLockUI();
   toast("软件锁已关");
 }
@@ -7133,8 +7584,10 @@ $("segLockPwd").addEventListener("click", () => setLockMode("password"));
 $("navSettings").addEventListener("click", () => {
   setDrawer(false);            // 手机上抽屉让位给设置弹窗
   syncLayoutUI();
+  syncThemeUI();
   syncResumeUI();
   syncImportUI();
+  syncPickUI();
   syncNotifUI();
   syncLockUI();
   setImpHelp(false);
@@ -7142,7 +7595,7 @@ $("navSettings").addEventListener("click", () => {
   $("setModal").hidden = false;
 });
 $("setClose").addEventListener("click", () => { $("setModal").hidden = true; });
-$("setModal").addEventListener("pointerdown", e => { if (e.target === $("setModal")) $("setModal").hidden = true; });
+$("setModal").addEventListener("pointerdown", e => { if (e.target === $("setModal")){ ateClick(); $("setModal").hidden = true; } });
 
 /* ============================================================
    11·6. 从资料库添加 —— 收藏夹 / 待播 都能直接挑
@@ -7164,7 +7617,16 @@ function openPicker(target){
   pkOrder = [];
   const has = new Set(o.ids);
   $("pkTitle").textContent = `添加到「${o.name}」`;
-  $("pkList").innerHTML = store.items.map(m => {
+  // 已经在这一列里的默认不再列一遍（第二十批第 4 项）—— 挑的是"要加什么"，
+  // 把加过的混在中间只会让人多扫一遍。想看全的，设置里那档拨过去就是老样子。
+  const pool = pickerAll() ? store.items : store.items.filter(m => !has.has(m.id));
+  if (!pool.length){
+    $("pkList").innerHTML =
+      `<p class="pk-hint">资料库里${store.items.length ? "能加的都已经在这一列里了" : "还没有音视频"}。</p>`;
+    pickModal.hidden = false;
+    return;
+  }
+  $("pkList").innerHTML = pool.map(m => {
     const on = has.has(m.id);
     return `<button class="pick-row" data-pick="${esc(m.id)}" role="checkbox" aria-checked="${on}"
               ${on ? 'aria-disabled="true"' : ""}>
@@ -7192,7 +7654,7 @@ $("pkList").addEventListener("click", e => {
   else if (!on && i >= 0) pkOrder.splice(i, 1);
 });
 $("pkCancel").addEventListener("click", closePicker);
-$("pickModal").addEventListener("pointerdown", e => { if (e.target === $("pickModal")) closePicker(); });
+$("pickModal").addEventListener("pointerdown", e => { if (e.target === $("pickModal")){ ateClick(); closePicker(); } });
 $("pkOk").addEventListener("click", () => {
   const t = pickTarget;
   const o = t && pickObj(t);
@@ -7285,7 +7747,7 @@ for (const id of ["rdCount", "rdLabel", "rdArtist", "rdQuery"]) $(id).addEventLi
 $("rdCold").addEventListener("change", paintRdHint);
 $("rdCancel").addEventListener("click", closeRand);
 $("randModal").addEventListener("keydown", e => { if (e.key === "Escape"){ e.preventDefault(); closeRand(); } });
-$("randModal").addEventListener("pointerdown", e => { if (e.target === $("randModal")) closeRand(); });
+$("randModal").addEventListener("pointerdown", e => { if (e.target === $("randModal")){ ateClick(); closeRand(); } });
 $("rdOk").addEventListener("click", () => {
   const pool = randPool();
   const n = Math.min(rdWant(), pool.length);
@@ -7344,6 +7806,9 @@ function openAddMenu(anchor, itemId){
     // 才够得着，而这偏偏是每次进来最常点的那几下。
       `<button class="am-item" role="menuitem" data-act="info">${ICON_INFO}<span class="am-name">详情</span></button>`
     + `<button class="am-item" role="menuitem" data-act="edit">${ICON_PENCIL}<span class="am-name">编辑详情</span></button>`
+    // 第 10 项点名要夹在这两颗中间：上面是"改"，下面是"删"，分享是"给出去"，
+    // 前两颗都在动自己这份，中间这颗不动 —— 挨着"移除"放容易被顺手点到。
+    + `<button class="am-item" role="menuitem" data-act="share">${ICON_SHARE}<span class="am-name">分享文件</span></button>`
     + `<button class="am-item am-del" role="menuitem" data-act="delete">${ICON_TRASH}<span class="am-name">从资料库移除</span></button>`
     + `<div class="am-sep"></div><div class="am-sec">添加到</div>`
     + row("coll", FAV_ID, "喜欢", inColl(FAV_ID), ICON_HEART)
@@ -7374,6 +7839,136 @@ function closeAddMenu(){
   addMenuFor = null;
 }
 
+/* ============================================================
+   10b. 分享文件（第二十批第 10 项）
+   ============================================================
+   三端三套机制，用的都是各系统自己的正门，没有一样是这儿发明的：
+   · 安卓   —— 自己写的那颗 Share 插件（mobile/android/.../SharePlugin.java），
+               最后落到系统的 ACTION_SEND 选择器上：QQ、微信、蓝牙、邮件……
+               凡是自己注册过分享目标的都列在里面，不用我们挨个对接。
+   · 电脑壳 —— Electron 那边接一手（见 D:\electron-tingyu\main.js）：
+               落一份到临时目录、把它放进剪贴板、再在资源管理器里选中。
+               QQ/微信 的聊天框里 Ctrl+V 就能发出去。
+   · 浏览器 —— navigator.share 走系统分享面板（Windows 上浮出来的那个侧栏里
+               同样列着 QQ 和微信）；环境没有它就退回"存一份到下载文件夹"。
+
+   ⚠️ 三条路都拿不到时**不能**只弹一句"不支持"就完事 —— 分享的实质是
+      "把这份文件给出去"，存一份到用户自己的下载文件夹也算给到了。
+      真正没辙的只有一种：这条记录只剩索引，本体压根不在这台机器上。
+
+   ⚠️ 安卓和电脑壳都是**分片喂**的，不是把整个文件 base64 成一个大串再递过去：
+      一部两小时的片子能有好几个 G，那一下就够把页面撑爆。
+      切片按 blob.slice() 现切现读，内存里同时只有 1 MB 出头。 */
+const SHARE_CHUNK = 1 << 20;              // 1 MB 原文一片
+
+/* btoa 要的是"一个字符一个字节"的串。String.fromCharCode(...u8) 展开上万个数
+   会撑爆调用栈（Chrome 大概六万五封顶），所以按 8K 一截拼。 */
+function b64Of(u8){
+  let s = "";
+  for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192));
+  return btoa(s);
+}
+/* 分片遍历：每片交给 cb 一个 base64 串，串完为止。两个原生后端共用这一段。 */
+async function shareChunks(blob, cb){
+  for (let off = 0; off < blob.size; off += SHARE_CHUNK){
+    const part = new Uint8Array(await blob.slice(off, off + SHARE_CHUNK).arrayBuffer());
+    await cb(b64Of(part));
+  }
+}
+/* 本体 blob 大多带着导入时那份 MIME，但老记录、或者从"只建索引"那条路回来的
+   可能是空的 —— 那就按扩展名补一个。补不准也不要紧（接收方多半按扩展名认），
+   但**不能留空**：Android 的 ACTION_SEND 类型是空的，选择器里会少掉一批应用。 */
+const MIME_BY_EXT = {
+  mp3:"audio/mpeg", m4a:"audio/mp4", aac:"audio/aac", flac:"audio/flac", wav:"audio/wav",
+  ogg:"audio/ogg", oga:"audio/ogg", opus:"audio/ogg", wma:"audio/x-ms-wma", aiff:"audio/aiff",
+  aif:"audio/aiff", ape:"audio/x-ape", wv:"audio/x-wavpack", dsf:"audio/x-dsf", dff:"audio/x-dff",
+  alac:"audio/mp4", mp4:"video/mp4", m4v:"video/mp4", webm:"video/webm",
+  mkv:"video/x-matroska", mov:"video/quicktime", avi:"video/x-msvideo", ts:"video/mp2t",
+  flv:"video/x-flv", wmv:"video/x-ms-wmv", mpg:"video/mpeg", mpeg:"video/mpeg", "3gp":"video/3gpp",
+};
+const mimeOfName = n => MIME_BY_EXT[ext(n)] || "application/octet-stream";
+
+/* ⚠️ 文件名要过一道手才能交出去：它会被拼成磁盘上的路径。
+   "摇滚/现场.flac" 这种带斜杠的名字在安卓上会让 File 直接变成一层目录，
+   万一混进 ".." 还能写到分享目录外面去。斜杠一律换成下划线，别的一概不动。 */
+const safeShareName = n => String(n || "音频").replace(/[\\/]+/g, "_").replace(/^\.+/, "_").slice(0, 120) || "音频";
+
+async function shareViaAndroid(blob, name, mime){
+  toast("正在准备分享…", { hold: true });
+  try{
+    await CapShare.begin({ name, mime });
+    await shareChunks(blob, data => CapShare.chunk({ data }));
+    await CapShare.finish();          // 系统选择器就是这一下弹出来的
+    hideToast();                      // 提示条别挡在选择器上面
+  }catch(err){
+    toast("分享没能送出去：" + ((err && err.message) || err));
+  }
+}
+
+async function shareViaShell(blob, name, mime){
+  toast("正在准备分享…", { hold: true });
+  try{
+    await window.listra.shareBegin({ name, mime });
+    await shareChunks(blob, data => window.listra.shareChunk({ data }));
+    const r = await window.listra.shareEnd();
+    hideToast();
+    toast(r && r.copied
+      ? "已经复制到剪贴板 —— 切到 QQ／微信 的聊天框里按 Ctrl+V 就发出去了"
+      : "已经在文件夹里给你选中了，把它拖进 QQ／微信 的聊天框就行");
+  }catch(err){
+    toast("分享没能送出去：" + ((err && err.message) || err));
+  }
+}
+
+async function shareViaWeb(blob, name, mime){
+  const file = new File([blob], name, { type: mime });
+  try{
+    await navigator.share({ files: [file], title: name });
+  }catch(err){
+    // 用户在系统面板上按了取消 —— 这不是错误，别弹一句吓人的话
+    if (err && err.name === "AbortError") return;
+    toast("分享没能送出去：" + ((err && err.message) || err));
+  }
+}
+
+/* 兜底：存一份到浏览器自己的下载文件夹。
+   没有别的手段时才走这儿，所以提示里要把"东西去哪儿了"说清楚。 */
+function shareViaDownload(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // ⚠️ 不能立刻 revoke：下载是异步的，这边一撤 URL 那边就断了，存出来是个 0 字节。
+  //    一分钟足够任何正常大小的下载启动，又不会把这份 blob 一直摁在内存里。
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast("这台机器上没有系统分享，已经存了一份到「下载」文件夹");
+}
+
+async function shareItem(m){
+  if (!m) return;
+  let blob = (m.file instanceof Blob) ? m.file : null;
+  if (!blob){
+    // "只建索引"进来的、或者 v1 时代的老记录，本体还在库里躺着
+    try{
+      const got = await DB.get("files", m.id);
+      if (got instanceof Blob) blob = got;
+    }catch{}
+  }
+  if (!blob){ toast("这一条只剩索引了，本体不在这台机器上，没有东西可分享"); return; }
+  const name = safeShareName(m.name);
+  const mime = blob.type || mimeOfName(name);
+  if (CapShare) return shareViaAndroid(blob, name, mime);
+  if (window.listra && typeof window.listra.shareBegin === "function") return shareViaShell(blob, name, mime);
+  // ⚠️ 问的是 canShare 不是 share：navigator.share 在桌面 Chrome/Edge 上一直有，
+  //    但**带文件**的那一档是要单问的（火狐就属于"有 share、不能 share 文件"）。
+  if (navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: mime })] }))
+    return shareViaWeb(blob, name, mime);
+  shareViaDownload(blob, name);
+}
+
 addMenu.addEventListener("click", e => {
   const itemId = addMenuFor;
   if (!itemId) return;
@@ -7400,6 +7995,7 @@ addMenu.addEventListener("click", e => {
       const a = act.dataset.act;
       if (a === "edit") openEdit(m);
       else if (a === "info") openInfo(m);
+      else if (a === "share") shareItem(m);
       else removeItems([m]);
     }
     return;
@@ -7427,7 +8023,7 @@ document.addEventListener("pointerdown", e => {
   const t = e.target;
   // target 不一定是元素（可能是 document 或文本节点），closest 会直接抛
   if (t instanceof Element && (addMenu.contains(t) || t.closest("[data-more]"))) return;
-  closeAddMenu();
+  ateClick(); closeAddMenu();
 }, true);
 addEventListener("resize", closeAddMenu);
 $("stage").addEventListener("scroll", closeAddMenu, { passive:true });
@@ -7486,7 +8082,7 @@ document.addEventListener("pointerdown", e => {
   if (navMenu.hidden) return;
   const t = e.target;
   if (t instanceof Element && (navMenu.contains(t) || t.closest("[data-menu]"))) return;
-  closeNavMenu();
+  ateClick(); closeNavMenu();
 }, true);
 addEventListener("resize", closeNavMenu);
 $("sidebar").addEventListener("scroll", closeNavMenu, { passive:true });
@@ -7571,7 +8167,7 @@ document.addEventListener("pointerdown", e => {
   if (sortMenu.hidden) return;
   const t = e.target;
   if (t instanceof Element && (sortMenu.contains(t) || t.closest(SORT_ANCHOR_SEL))) return;
-  closeSortMenu();
+  ateClick(); closeSortMenu();
 }, true);
 // resize 时收掉：它是 body 上的 fixed 浮层，锚点一动就飘在错的地方了
 // （面板自己不收，它走 placePlPanel 贴回去。菜单锚在面板顶上那条，
@@ -7628,7 +8224,7 @@ document.addEventListener("pointerdown", e => {
   if (queueMenu.hidden) return;
   const t = e.target;
   if (t instanceof Element && (queueMenu.contains(t) || t.closest("#addQueue"))) return;
-  closeQueueMenu();
+  ateClick(); closeQueueMenu();
 }, true);
 addEventListener("resize", closeQueueMenu);
 $("addQueue").addEventListener("click", () => {
@@ -7826,7 +8422,7 @@ document.addEventListener("pointerdown", e => {
   // 漏了这一条，菜单一弹出来点任何一项都会先把面板收掉，人看到的是"点了没反应"。
   if (t instanceof Element && (plPanel.contains(t) || t.closest(PL_ANCHOR_SEL)
       || sortMenu.contains(t) || t.closest(SORT_ANCHOR_SEL))) return;
-  closePlPanel();
+  ateClick(); closePlPanel();
 }, true);
 // 窗口尺寸变了，把面板挪回按钮底下接着钉着 —— 不是收起来。
 // （原来是 resize 就 close，可 #stage 一出现纵向滚动条，内联窗口的 innerWidth
@@ -8397,7 +8993,7 @@ document.addEventListener("pointerdown", e => {
   if (searchDrop.hidden) return;
   const t = e.target;
   if (t instanceof Element && (searchDrop.contains(t) || t.closest(".search"))) return;
-  closeSearchDrop();
+  ateClick(); closeSearchDrop();
 }, true);
 addEventListener("resize", () => { if (!searchDrop.hidden) placeSearchDrop(); });
 
@@ -8461,7 +9057,7 @@ document.addEventListener("pointerdown", e => {
   if (filterMenu.hidden) return;
   const t = e.target;
   if (t instanceof Element && (filterMenu.contains(t) || t.closest(".fbtn"))) return;
-  closeFilterMenu();
+  ateClick(); closeFilterMenu();
 }, true);
 addEventListener("resize", closeFilterMenu);
 $("stage").addEventListener("scroll", closeFilterMenu, { passive:true });
@@ -8511,7 +9107,7 @@ document.addEventListener("pointerdown", e => {
   if (addFileMenu.hidden) return;
   const t = e.target;
   if (t instanceof Element && (addFileMenu.contains(t) || t.closest("#btnAddFiles"))) return;
-  closeAddFileMenu();
+  ateClick(); closeAddFileMenu();
 }, true);
 addEventListener("resize", closeAddFileMenu);
 $("btnAddFiles").addEventListener("click", () => {
@@ -8521,7 +9117,58 @@ $("btnAddFiles").addEventListener("click", () => {
 
 $("fileInput").addEventListener("change", e => { addFiles([...e.target.files]); e.target.value = ""; });
 
+/* 安卓那边的一整套（第二十批第 1 项）。
+   ⚠️ 顺序是这一项的正身：**先问安卓，再问浏览器**。
+     安卓 WebView 里 window.showDirectoryPicker 恒等于 undefined，原来那句
+     `if (!window.showDirectoryPicker)` 是能兜住的 —— 但得先走到它。
+     之所以看着像"点击没反应"，是这条路整个没人接（详见 DirPlugin.java 开头）。 */
+/* content:// → WebView 里那个假地址。**一个字都别自己拼**：
+   下面这行就是抄 Capacitor 自己的 native-bridge.js（它把插件传回来的 filePath
+   转成 webviewServerUrl 开头的地址，认的是同一套前缀），连 replace 的写法都一样。
+   ⚠️ 这道替换里藏着一个斜杠的账，手写必错（我两种写法都错过一遍）：
+     "content://com.foo/x" 里 `content:/` 只吃掉**一道**斜杠，剩 `"/com.foo/x"`，
+     接在 `/_capacitor_content_` 后面 → `…/_capacitor_content_/com.foo/x`（一道）。
+   安卓那头（AndroidProtocolHandler.openContentUrl）是拿
+     uri.toString().replace(baseUrl + "/_capacitor_content_", "content:/")
+   还原的，前缀不带尾斜杠、但连 `_content_` 后面那道一起吃掉，换回来的 `content:/`
+   再跟剩下的 `/com.foo/x` 拼成 `content://com.foo/x` —— 正好对上。
+   拼成两道（少 slice 一位）还原出来是 `content:///com.foo/x`，authority 空了，
+   ContentResolver 找不到人，症状又变回"点了没反应"。 */
+const capContentUrl = uri =>
+  "https://localhost" + String(uri).replace("content:/", "/_capacitor_content_");
+/* 清单里那些 content:// 一个个读回来。
+   写成生成器是因为 addFiles 是**边遍历边处理**的（for await）：读一个进去一个，
+   不像网页端那样手里先攥着一整批懒句柄。读完的 File 会跟着条目一直在内存里
+   （播放要它），所以这里只保证"不额外多攥一份"。 */
+async function* androidFolderFiles(list){
+  for (const f of list){
+    try{
+      const r = await fetch(capContentUrl(f.uri));
+      if (!r.ok) continue;
+      const blob = await r.blob();
+      yield new File([blob], f.name, {
+        lastModified: f.lastModified || Date.now(),
+        // 本地服务器给的类型不一定准（有些 provider 不报），按扩展名兜一道
+        type: blob.type || mimeOfName(f.name),
+      });
+    }catch{ /* 单个读不出来不该拖垮整批，和网页端 walk 里的 catch 一个道理 */ }
+  }
+}
+async function pickDirectoryAndroid(){
+  let res;
+  try{ res = await CapDir.pick(); }
+  catch(err){ toast("打不开系统的文件夹选择器：" + ((err && err.message) || err)); return; }
+  if (!res || res.canceled) return;                  // 用户按了返回
+  const all = Array.isArray(res.files) ? res.files : [];
+  const media = all.filter(f => f && typeof f.name === "string" && kindOf(f.name));
+  if (!media.length){ toast("这个文件夹里没有音频或视频"); return; }
+  toast("正在读取文件夹…", { hold: true });
+  try{ await addFiles(androidFolderFiles(media)); }
+  finally{ hideToast(); }                            // 成没成都得把它撤了，不然赖着不走
+}
+
 async function pickDirectory(){
+  if (CapDir){ await pickDirectoryAndroid(); return; }
   if (!window.showDirectoryPicker){ toast("这个浏览器不支持选文件夹，用「选文件」或直接拖进来"); return; }
   try{ const h = await window.showDirectoryPicker({ mode:"read" }); await scanDirectory(h); }
   catch(err){ if (err?.name !== "AbortError") toast("打不开这个文件夹"); }
@@ -8581,9 +9228,23 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.5";
+const APP_VERSION = "0.1.6";
 
 const CHANGELOG = [
+  { v: "0.1.6", date: "2026-09-17", title: "文件夹、外观与分享",
+    items: [
+      "手机端：「选文件夹」真能用了 —— 走系统的文件夹选择器，挑中的目录里有多少音视频就进来多少",
+      "进度保存：普通曲子也记住了（从前只记视频和一小时以上的长录音，关掉再打开那条还在、进度却归了零）",
+      "弹窗、小窗、下拉列表点旁边只把它关掉，那一下不会再点到底下的东西",
+      "设置：多了一档「从资料库添加时」—— 已经在本页里的不再列出来，想看全的拨过去就是老样子",
+      "电脑端设置里那句「通知栏播放控制」收起来了（那是手机上的东西）",
+      "设置里那段讲忘记密码的说明删掉了",
+      "自带歌词：音频里内嵌的歌词读得出来了（MP3 / FLAC / MP4 三种都读），没有的还能自己贴一段",
+      "忘记密码：输入密码那一页多了「忘了密码？」，可以选「从现在起等 x 小时」—— 到点密码自己关掉，之后要在设置里重新设一个",
+      "外观：多了「黑夜模式」和「关灯模式」—— 白 + 薄荷绿、黑 + 薄荷绿、以及给清新那套加一层暗色滤镜（放着的视频画面不受影响）",
+      "分享文件：「更多操作」里多了这一颗，电脑和手机都能把文件直接发给 QQ、微信",
+      "侧边栏底部多了「投送」和「教程」两颗（还在做，先占个位置）",
+    ] },
   { v: "0.1.5", date: "2026-09-16", title: "顺序、确认与手机端",
     items: [
       "手机端：「从资料库添加」那个列表不再只显示左半边，右半边的勾选框和文件名回到屏幕里了",
@@ -8649,7 +9310,7 @@ const CHANGELOG = [
       "播放台：波形当进度条，倍速、随机、定时、定量，标记点和片段随时跳",
       "视频：播放轴上划一下就能预览那一帧，能逐帧进退，封面用画面本身",
       "音频：唱片页配台词页，内嵌歌词读得出来，没有也能自己贴一段",
-      "进度保存：长片子、长录音关掉再打开，接着上次的地方放",
+      "进度保存：音频视频都算，关掉软件再打开，接着上次的地方放",
       "全屏：手机横屏自动转、长按快进、防误触锁，电脑点画面就能暂停",
     ] },
 ];
@@ -8715,7 +9376,7 @@ renderAbout();
 
 $("aboutClose").addEventListener("click", closeAbout);
 $("aboutModal").addEventListener("pointerdown", e => {
-  if (e.target === $("aboutModal")) closeAbout();     // 点遮罩空白处关掉，跟别的弹窗一致
+  if (e.target === $("aboutModal")){ ateClick(); closeAbout(); }   // 点遮罩空白处关掉，跟别的弹窗一致
 });
 $("aboutLinks").addEventListener("click", e => {
   const btn = e.target instanceof Element ? e.target.closest("button") : null;
@@ -8730,6 +9391,16 @@ $("navAbout").addEventListener("click", openAbout);
 $("navAbout").addEventListener("keydown", e => {
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openAbout(); }
 });
+/* 投送 / 教程：第二十批第 11 项先占位。两颗都还没页面可开，
+   点了一句大白话说清楚，别让用户以为按坏了 —— 「关于」里那几条外链
+   没填 url 的时候也是这个路子。 */
+for (const [id, what] of [["navCast", "投送"], ["navGuide", "教程"]]){
+  const go = () => toast(`「${what}」还在做，这一版先占个位置`);
+  $(id).addEventListener("click", go);
+  $(id).addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); }
+  });
+}
 
 /* 从最上层往下依次关掉一层。关到了返回 true，全都关着返回 false。
    Esc 和安卓的返回键共用这一份 —— 两处各写一条链迟早会分叉，
@@ -8828,6 +9499,14 @@ let CapPip = (onNative && CAP.Plugins) ? (CAP.Plugins.Pip || null) : null;
 // ⚠️ 这个 let 必须留在这儿而不是第 9 节：CAP / onNative 是 16.5 才有的，
 //    在第 9 节求值会撞上 TDZ。第 9 节那几个函数都是运行时才碰它，来得及。
 let CapMedia = (onNative && CAP.Plugins) ? (CAP.Plugins.Media || null) : null;
+// Share 也是自己写的那颗（mobile/android/.../SharePlugin.java）。第 10 项的分享文件。
+// **只有安卓有** —— 网页端走 navigator.share、桌面壳走 Electron 那边的 IPC，
+// 两者都不经过这儿。名字占的是 "Share" 这个通用词：@capacitor/share 没装，
+// 哪天真装了得先把这个改掉（两个同名插件在 Plugins 下会打架）。
+let CapShare = (onNative && CAP.Plugins) ? (CAP.Plugins.Share || null) : null;
+// Dir 也是自己写的那颗（mobile/android/.../DirPlugin.java）。第 1 项的「选文件夹」。
+// **只有安卓有** —— 网页端走 showDirectoryPicker，那边是真的能用。
+let CapDir = (onNative && CAP.Plugins) ? (CAP.Plugins.Dir || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
@@ -8997,6 +9676,14 @@ $("btnWhere").addEventListener("click", () => {
 syncWhereUI();
 
 let toastTimer = 0;
+function hideToast(){
+  const el = $("toast");
+  if (!el) return;
+  clearTimeout(toastTimer);
+  el.style.opacity = "0";
+  el.style.transform = "translateX(-50%) translateY(6px)";
+  el.style.pointerEvents = "none";
+}
 // act 给了就是一条"能点的提示"：多一颗按钮、多停一会儿、并且要能接住点击。
 // 不给就是原来那条纯报信的，浮在上面不吃事件。
 function toast(msg, act){
@@ -9005,11 +9692,21 @@ function toast(msg, act){
     el = document.createElement("div");
     el.id = "toast";
     el.style.cssText = "position:fixed;left:50%;bottom:calc(var(--deck-h) + var(--sab) + 20px);" +
-      "transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:999px;" +
+      "transform:translateX(-50%);background:var(--plate);color:var(--on-plate);padding:9px 16px;border-radius:999px;" +
       "font-size:13px;z-index:300;box-shadow:var(--sh-2);transition:opacity .2s,transform .2s;pointer-events:none";
     document.body.appendChild(el);
   }
   clearTimeout(toastTimer);
+  /* act.hold 是"还在办"的那种：分享一个大文件要一份份把字节喂过去，几百毫秒到好几秒，
+     中途不能自己收走 —— 后面办完那句 toast 会把它顶掉，办砸了那句也一样。 */
+  if (act && act.hold){
+    el.style.display = "";
+    el.style.pointerEvents = "none";
+    el.textContent = msg;
+    el.style.opacity = "1";
+    el.style.transform = "translateX(-50%) translateY(0)";
+    return;
+  }
   if (act && act.label){
     el.style.display = "flex";
     el.style.alignItems = "center";
@@ -9021,12 +9718,12 @@ function toast(msg, act){
     b.textContent = act.label;
     b.addEventListener("click", () => { el.style.opacity = "0"; act.onAct?.(); }, { once:true });
     el.appendChild(b);
-    toastTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(-50%) translateY(6px)"; el.style.pointerEvents = "none"; }, 8000);
+    toastTimer = setTimeout(hideToast, 8000);
   } else {
     el.style.display = "";
     el.style.pointerEvents = "none";
     el.textContent = msg;
-    toastTimer = setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(-50%) translateY(6px)"; el.style.pointerEvents = "none"; }, 2400);
+    toastTimer = setTimeout(hideToast, 2400);
   }
   el.style.opacity = "1";
   el.style.transform = "translateX(-50%) translateY(0)";
@@ -9040,6 +9737,10 @@ function toast(msg, act){
    真资料库已经画在屏幕上了，锁等于白设。 */
 lockLoad();
 if (lock.on) showLock();
+// 忘了密码定的那个钟点，锁着的时候要接着走 —— 人可能就坐在锁屏前等它到点。
+// 已经过点了（lockLoad 里判过）就不再挂，改成说一句：锁没了，得重新设一个。
+if (lock.on) armLockTimer();
+else if (lockExpired) setTimeout(() => toast("软件锁到点关了。想接着用就在设置里重新设一个"), 1800);
 paintVolume();
 // 待播在这儿就建，别等 restoreLibrary —— 它要一条条去 files 存储里取本体，
 // 库里存的文件一多就是几百次读，等它跑完再建的话侧栏会空着一两秒才冒出「待播」。
@@ -9056,6 +9757,7 @@ ensureProfile();
 // 于是"开着"这个状态要等到第一次换曲目才生效。一个收口函数两个方向都管。
 applyMediaSession();
 syncLayoutUI();
+syncThemeUI();
 syncResumeUI();
 syncImportUI();
 syncNotifUI();
