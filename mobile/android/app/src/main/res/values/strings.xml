@@ -5,4 +5,8 @@
     <string name="package_name">com.mingyuezai0.listra</string>
     <string name="custom_url_scheme">com.mingyuezai0.listra</string>
     <string name="notif_channel">播放控制</string>
+    <!-- 悬浮歌词那条前台服务的通知（第二十二批第 7 项）。IMPORTANCE_MIN，
+         用户基本看不见它 —— 但它必须在，否则系统不许服务常驻。 -->
+    <string name="lyric_channel">悬浮歌词</string>
+    <string name="lyric_notif">悬浮歌词开着</string>
 </resources>

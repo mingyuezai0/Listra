@@ -20,6 +20,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SharePlugin.class);
         registerPlugin(DirPlugin.class);
         registerPlugin(TintPlugin.class);
+        registerPlugin(LyricPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

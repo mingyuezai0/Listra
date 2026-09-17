@@ -1324,6 +1324,40 @@ body.pip-on .fs-ui{display:none}
 .set-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;margin:0 -4px;padding:0 4px}
 #setModal .modal-actions{flex:0 0 auto}
 
+/* --- 设置的四个标签页（第二十二批第 4 项）---
+   外观 / 播放 / 系统 / 安全。原来八行竖着排，越加越长；分页之后每页三五条，
+   一眼看得完。⚠️ 只是**重新分组**，每一项的功能一个字没动。 */
+.set-tabs{display:flex;gap:4px;flex:0 0 auto;margin:0 0 14px;padding:3px;
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm)}
+.set-tab{flex:1 1 0;height:32px;border-radius:6px;font-size:12.5px;font-weight:550;
+  color:var(--ink-3);transition:background .15s,color .15s,box-shadow .15s}
+.set-tab:hover{color:var(--ink-2)}
+.set-tab[aria-selected="true"]{background:var(--surface);color:var(--mint-700);box-shadow:var(--sh-1)}
+.set-pane[hidden]{display:none}
+
+/* --- 细滚动条：设置 / 添加列表 / 播放列表（第二十二批第 3 项）---
+   薄荷绿的细条。内容不够一屏时 WebKit 压根不画滚动条，所以"过少就不显示"
+   是白来的，不用自己判高度。
+   ⚠️ 只给这三个容器加。侧栏、#stage 那种大块滚动区加满了会到处是绿条，
+      那是装饰不是提示，反而脏。 */
+.set-scroll:not(textarea)::-webkit-scrollbar,
+.pick-list:not(textarea)::-webkit-scrollbar,
+#plPanel:not(textarea)::-webkit-scrollbar{width:6px;height:6px}
+.set-scroll:not(textarea)::-webkit-scrollbar-track,
+.pick-list:not(textarea)::-webkit-scrollbar-track,
+#plPanel:not(textarea)::-webkit-scrollbar-track{background:transparent}
+.set-scroll:not(textarea)::-webkit-scrollbar-thumb,
+.pick-list:not(textarea)::-webkit-scrollbar-thumb,
+#plPanel:not(textarea)::-webkit-scrollbar-thumb{background:var(--mint-200);border-radius:99px}
+.set-scroll:hover:not(textarea)::-webkit-scrollbar-thumb,
+.pick-list:hover:not(textarea)::-webkit-scrollbar-thumb,
+#plPanel:hover:not(textarea)::-webkit-scrollbar-thumb{background:var(--mint-300)}
+/* Firefox / 新标准那条路：`scrollbar-width` 只认粗细认不了颜色，给个细的。
+   上面那组 ::-webkit- 选择器在认得的浏览器里会被这条 @supports 排除掉。 */
+@supports not selector(::-webkit-scrollbar){
+  .set-scroll,.pick-list,#plPanel{scrollbar-width:thin;scrollbar-color:var(--mint-300) transparent}
+}
+
 .about-hero{display:flex;flex-direction:column;align-items:center;text-align:center;
   padding-bottom:18px;border-bottom:1px solid var(--line)}
 .about-logo{width:60px;height:60px;border-radius:17px;background:var(--mint-500);
@@ -1867,7 +1901,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
 }
 /* ============================================================
    软件锁
-   ---- 默认关着，在「设置 · 软件锁」里开。开着的话，每次**冷启动**
+   ---- 默认关着，在「设置 · 安全 · 软件锁」里开。开着的话，每次**冷启动**
        拦在最前面一次（切后台回来不拦，见 lockUp 那段）。
    ---- z-index 350：高过 toast(300)，锁着的时候"已加入 3 个文件"这种话
        不该从底下冒出来；低过开屏(400)，那一下过场还是留给它。
@@ -1986,7 +2020,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
   </div>
 </div>
 
-<!-- 软件锁。默认关着，在「设置 · 软件锁」里开。
+<!-- 软件锁。默认关着，在「设置 · 安全 · 软件锁」里开。
      ⚠️ 它必须是**同步**判定的（在 lockLoad 里读 localStorage，不是 IndexedDB）：
         资料库是 restoreLibrary 异步读回来的，等它回来再决定的话，锁屏之前
         已经先露了一帧真内容。localStorage 是这儿唯一能同步读到的东西，
@@ -2587,9 +2621,23 @@ body.vinyl-wide #lyricBackBtn{display:none}
 <div class="modal" id="setModal" hidden>
   <div class="modal-box">
     <h3>设置</h3>
+    <!-- 四个标签页（第二十二批第 4 项）。只是重新分组，每一项的功能一个字没动。 -->
+    <div class="set-tabs" role="tablist" aria-label="设置分类">
+      <button class="set-tab" id="setTabLook" role="tab" data-set-tab="look"
+              aria-selected="true" aria-controls="setPaneLook">外观</button>
+      <button class="set-tab" id="setTabPlay" role="tab" data-set-tab="play"
+              aria-selected="false" aria-controls="setPanePlay">播放</button>
+      <button class="set-tab" id="setTabSys" role="tab" data-set-tab="sys"
+              aria-selected="false" aria-controls="setPaneSys">系统</button>
+      <button class="set-tab" id="setTabSafe" role="tab" data-set-tab="safe"
+              aria-selected="false" aria-controls="setPaneSafe">安全</button>
+    </div>
     <!-- ⚠️ 中间这一坨要能自己滚（见 .set-scroll 那段注释）。加设置项请加在这里面，
-         别漏到外面去 —— 漏出去的那一项会把「完成」顶出屏幕。 -->
+         别漏到外面去 —— 漏出去的那一项会把「完成」顶出屏幕。
+         ⚠️ 里面再分四个 .set-pane，一个标签页一个；开合由 setTab() 管，
+            没选中的那个挂 hidden。加新设置项先想清楚该进哪一页。 -->
     <div class="set-scroll">
+    <div class="set-pane" id="setPaneLook" role="tabpanel" aria-labelledby="setTabLook">
     <div class="set-row">
       <span class="set-label" id="setThemeLabel">外观</span>
       <div class="seg" role="group" aria-labelledby="setThemeLabel">
@@ -2616,6 +2664,8 @@ body.vinyl-wide #lyricBackBtn{display:none}
         </button>
       </div>
     </div>
+    </div>
+    <div class="set-pane" id="setPanePlay" role="tabpanel" aria-labelledby="setTabPlay" hidden>
     <div class="set-row">
       <span class="set-label" id="setResumeLabel">接着上次看</span>
       <div class="seg" role="group" aria-labelledby="setResumeLabel">
@@ -2625,6 +2675,28 @@ body.vinyl-wide #lyricBackBtn{display:none}
       </div>
       <p class="set-note">视频和音频都会记住上次停在哪，关掉软件再打开接着放。</p>
     </div>
+    <div class="set-row">
+      <span class="set-label" id="setVinylLabel">换曲时打开唱片页</span>
+      <div class="seg" role="group" aria-labelledby="setVinylLabel">
+        <button class="seg-btn" id="segVinylOn" aria-pressed="true">打开</button>
+        <button class="seg-btn" id="segVinylOff" aria-pressed="false">不打开</button>
+      </div>
+      <p class="set-note">放音频换到下一首时，自动掀开那张大唱片。关掉之后
+        上下一首都不会再弹它，想进去点一下播放台就行。</p>
+    </div>
+    <!-- 悬浮歌词（第二十二批第 7 项）。电脑端是一个置顶透明小窗，
+         手机端是一条浮在其他应用上面的原生悬浮窗。网页端两样都没有，
+         整行由 syncLyricRow() 收掉。 -->
+    <div class="set-row" id="rowLyric">
+      <span class="set-label" id="setLyricLabel">悬浮歌词</span>
+      <div class="seg" role="group" aria-labelledby="setLyricLabel">
+        <button class="seg-btn" id="segLyricOn" aria-pressed="false">开启</button>
+        <button class="seg-btn" id="segLyricOff" aria-pressed="true">关闭</button>
+      </div>
+      <p class="set-note" id="lyricNote">在软件外面浮一条半透明的歌词，唱到哪句高亮哪句。</p>
+    </div>
+    </div>
+    <div class="set-pane" id="setPaneSys" role="tabpanel" aria-labelledby="setTabSys" hidden>
     <div class="set-row">
       <div class="set-head">
         <span class="set-label" id="setImportLabel">导入方式</span>
@@ -2659,6 +2731,20 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <p class="set-note">手机下拉通知栏里那条听雨的播放控制（锁屏上那颗也是同一个）。</p>
     </div>
     <div class="set-row">
+      <span class="set-label" id="setWhereLabel">文件位置</span>
+      <!-- 按钮上的字和下面那段说明三端各一套，由 syncWhereUI() 填 ——
+           同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。
+           「更改」只在电脑端露出来：手机上文件存在应用私有目录里，换到哪儿去
+           都是同一个沙箱；网页端更没得挑。由 syncWhereUI 开合。 -->
+      <div class="set-inline">
+        <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
+        <button class="btn set-where" id="btnSaveDir" hidden>更改</button>
+        <p class="set-note" id="whereNote"></p>
+      </div>
+    </div>
+    </div>
+    <div class="set-pane" id="setPaneSafe" role="tabpanel" aria-labelledby="setTabSafe" hidden>
+    <div class="set-row">
       <span class="set-label" id="setLockLabel">软件锁</span>
       <div class="seg" role="group" aria-labelledby="setLockLabel">
         <button class="seg-btn" id="segLockOff" aria-pressed="true">关闭</button>
@@ -2689,17 +2775,6 @@ body.vinyl-wide #lyricBackBtn{display:none}
       <!-- 这段平时是空的，只有 crypto.subtle 用不了的那种环境才由 syncLockUI 填一句 -->
       <p class="set-note" id="lockNote" hidden></p>
     </div>
-    <div class="set-row">
-      <span class="set-label" id="setWhereLabel">文件位置</span>
-      <!-- 按钮上的字和下面那段说明三端各一套，由 syncWhereUI() 填 ——
-           同一份 HTML 要发网页、桌面壳、安卓三处，写死哪一套都是错的。
-           「更改」只在电脑端露出来：手机上文件存在应用私有目录里，换到哪儿去
-           都是同一个沙箱；网页端更没得挑。由 syncWhereUI 开合。 -->
-      <div class="set-inline">
-        <button class="btn set-where" id="btnWhere" disabled>在文件夹中显示</button>
-        <button class="btn set-where" id="btnSaveDir" hidden>更改</button>
-        <p class="set-note" id="whereNote"></p>
-      </div>
     </div>
     </div>
     <div class="modal-actions"><button class="btn primary" id="setClose">完成</button></div>
@@ -2740,7 +2815,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
     <h3>导入会另存一份</h3>
     <p class="modal-note">导入时，软件会把文件<b>复制一份</b>存进自己这儿。
       你原来的文件不会被改动、也不会被删除 —— 从哪儿导入的还在哪儿。
-      这一条随时能在「设置 · 导入方式」里看到，也可以在那儿换成「只建索引」。</p>
+      这一条随时能在「设置 · 系统 · 导入方式」里看到，也可以在那儿换成「只建索引」。</p>
     <div class="modal-actions"><button class="btn primary" id="ntOk">知道了</button></div>
   </div>
 </div>
@@ -3287,6 +3362,12 @@ const store = {
        这份只是备份 —— 清了网站数据之后还能把外观捞回来。 */
     theme: "fresh",
     mediaSession: true,                // 手机下拉通知栏 / 锁屏上那条听雨的播放控制
+    /* 换一首音频时自动掀开唱片页（第二十二批第 2 项）。默认开 ——
+       老存档里没这个键，按"没关过"算（判据写 !== false）。 */
+    vinylAuto: true,
+    // 桌面歌词（第二十二批第 7 项）。默认关：它会多开一个置顶窗口，
+    // 不该在用户没要求的时候自己冒出来。
+    lyricFloat: false,
     // 侧栏两个大项收起/展开。默认都收起 —— 夹子多了侧栏会顶满，
     // 而资料库和设置就在同一列里，被挤下去就点不到了。
     navOpen: { coll:false, queue:false },
@@ -3805,6 +3886,43 @@ async function addFiles(files, { silent = false } = {}){
   return list.length;
 }
 
+/* 下面这趟补标签是**逐条串行**跑的，从前每读完一条就整页重画一次
+   （侧栏 + 资料库网格 + 顶栏全rebuild）。手机上几十条就能把开屏那 1.7 秒
+   整个堵死 —— 表现就是图标和软件名一顿一顿地卡。
+   换成"最多 250ms 画一次 + 整批结束再补一发"：看上去还是"陆续冒出来"，
+   但主线程有余力去画开屏。 */
+let hydratePaintAt = 0;
+function hydrateRepaint(){
+  const now = performance.now();
+  if (now - hydratePaintAt < 250) return;
+  hydratePaintAt = now;
+  renderAll();
+}
+
+/* 开屏那一下是纯演出，底下的活儿一点都不急 —— 索引已经把资料库画出来了，
+   封面/标签/时长晚一秒补上没人看得出来。等它收场再动重活儿，
+   别让读标签、解时长全挤在开屏那几帧里。 */
+function afterSplash(fn){
+  const sp = $("splash");
+  if (!sp || sp.hasAttribute("hidden")){ fn(); return; }
+  let fired = false;
+  const once = () => { if (fired) return; fired = true; fn(); };
+  /* 开屏可能**已经演完了**（索引读得慢，afterSplash 才被调到）——
+     这时候干等 1.5 秒纯属白搭。getAnimations() 只报这个元素自己的动画，
+     淡出用的是 forwards，演完是 finished，一眼能认出来。 */
+  try{
+    if (sp.getAnimations){
+      const running = sp.getAnimations().some(a => a.playState === "running");
+      if (!running){ once(); return; }
+    }
+  }catch{ /* 拿不到就退回下面那两条，慢一点但不会错 */ }
+  // spOut 是 #splash 自己那条淡出（1.06s 起、0.32s）。
+  // ⚠️ 子元素（.sp-mark / .sp-name / 四根 line）的 animationend 也会冒泡上来，
+  //    不过滤 target 的话第一根 line 一动画完就把重活儿全放出来了。
+  sp.addEventListener("animationend", e => { if (e.target === sp) once(); });
+  setTimeout(once, 1500);      // 兜底：动画被掐了、或者环境要求减少动效时也得走
+}
+
 // 后台做两件事：把文件本体真的存进软件，再把标签/封面/时长补齐。
 // 存本体这条刻意不 await —— 几百兆的文件写起来慢，让它跟读标签并行跑，互不拖累。
 let storageWarned = false;
@@ -3861,13 +3979,20 @@ async function hydrateMetas(items){
       // 下面全是要"读字节"的活儿 —— 手上没有本体就跳过。
       // 路径条目在导入这一刻本体还在手里，照读不误；只有从库里恢复回来那种
       // 才走到这儿（那时候读取会在 restoreLibrary 里按需补）。
-      if (!isBlob(m.file)){ renderAll(); continue; }
+      if (!isBlob(m.file)){ hydrateRepaint(); continue; }
       m.tags = await readTags(m.file);
       refreshCover(m);
       // 内嵌封面顺手缓存一份小的。电脑端重启之后 m.tags.cover 是没了，
       // 但封面图本身只有几十 KB —— 缓存它不算"存整份"，却能救回满屏的封面。
       if (isBlob(m.tags.cover)) DB.set("files", frameKey(m.id), m.tags.cover);
-      m.duration = await probeDuration(m);
+      /* ⚠️ 索引里已经有时长就别再探一遍。从前无条件探，等于每条都建一个媒体元素、
+         等 loadedmetadata（读不出来还要干等那个 8 秒超时）—— 库里只要有一条损坏的
+         文件，开屏就整整卡 8 秒。而且探失败会返回 0，**把索引里那个好数覆盖掉**，
+         于是时长时有时无。现在有就不动，探回来的 0 也不认。 */
+      if (!m.duration){
+        const d = await probeDuration(m);
+        if (d) m.duration = d;
+      }
       // 视频没内嵌封面的话，先把上次存下的帧封面捞回来，**一次都没有才去抓第一帧**。
       // "有就不抓"很要紧：不然每次重挂文件都会把用户看过的"退出帧"冲回第一帧。
       if (m.kind === "video" && !m.tags.cover && !m.frameCover){
@@ -3876,8 +4001,9 @@ async function hydrateMetas(items){
         else await seedFrameCover(m);
       }
     }catch{ /* 单个文件失败不该拖垮整批 */ }
-    renderAll();
+    hydrateRepaint();
   }
+  renderAll();          // 整批结束补一发，把最后那几条的封面也画上
   saveLibrary();
 }
 
@@ -4030,6 +4156,9 @@ async function restoreLibrary(){
     // 布尔开关的默认值是 true，所以判据得写 !== false：老存档里压根没这个键，
     // 用 !!st.mediaSession 会把"没关过"读成"关掉了"，升级上来的人通知栏就没了。
     store.settings.mediaSession = st.mediaSession !== false;
+    // 同上：默认 true，判据得写 !== false，否则升级上来的人唱片页就再也不弹了
+    store.settings.vinylAuto = st.vinylAuto !== false;
+    store.settings.lyricFloat = st.lyricFloat === true;
     if (st.navOpen && typeof st.navOpen === "object"){
       store.settings.navOpen = { coll:!!st.navOpen.coll, queue:!!st.navOpen.queue };
     }
@@ -4095,8 +4224,11 @@ async function restoreLibrary(){
   renderAll();
   // 现生成的 id 得当场落盘 —— 不然用户开一眼就关掉，下次打开又是另一个 id。
   if (profileFresh){ profileFresh = false; saveLibrary(); }
-  // 封面和时长要重读文件才有，所以接回本体之后再补一遍
-  if (revived.length) hydrateMetas(revived);
+  // 封面和时长要重读文件才有，所以接回本体之后再补一遍。
+  // ⚠️ 等开屏收场再动 —— 这趟是逐条读文件字节的重活儿，挤在开屏那几帧里
+  //    就是"图标和软件名一顿一顿的"（第二十二批第 1 项）。
+  //    资料库这会儿已经从索引画出来了，晚一秒补封面没人看得出来。
+  if (revived.length) afterSplash(() => hydrateMetas(revived));
   return scanned;
 }
 let pendingDir = null;
@@ -4937,11 +5069,15 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
   // restore 那趟也不开 —— 开软件迎面盖一张大唱片，就看不见资料库了；
   // 用户要的只是"播放台上摆着上次那条"（第 20 项）。
   if (m.kind === "audio"){
-    if (!restore && m.id !== lastAudioId) openVinyl(m);
+    // vinylAuto 关掉之后，换曲不再自动掀开 —— 用户自己点播放台照样能开（见 openVinyl）。
+    if (!restore && vinylAuto() && m.id !== lastAudioId) openVinyl(m);
   } else {
     closeVinyl();
   }
   lastAudioId = m.kind === "audio" ? m.id : null;
+  // 悬浮歌词换一条就整块换掉，不等下一次 timeupdate（那要等最多 250ms，
+  // 而换曲那一刻浮窗上还挂着上一首的最后一句，看着像卡住了）
+  lyricSentKey = ""; syncLyricFloat(true);
 
   if (autoplay) el.play().catch(()=>{});
   loadWaveform(m);
@@ -5037,6 +5173,13 @@ function advance(){
   clearPos(player.current);   // 这一条放完了，下次从头开始，别又跳回结尾
   flushStats();               // ended 不发 pause，累计时长得在这儿收一笔
 
+  /* 临时待播：整列都放过了就把这一列收走，停在这儿。放在最前面 ——
+     这一列都没了，后面"下一首是谁"、"循环到第几遍"全都没了意义。
+     ⚠️ 必须在「播完暂停」那道闸**之前**。从前它排在后面，开着播完暂停时
+        advance() 到那儿就 return 了，临时待播永远收不走 ——
+        用户听完整列（尤其是后台一首首听过去）却什么都没发生，报的就是这个。 */
+  if (retireTempIfDone()) return;
+
   // 「播完暂停」：到这儿就停住，下面的定量/循环/下一首一概不走。
   // 单曲循环放行 —— 它重放的是**同一首**，不是"下一个文件"，把它一并掐掉
   // 等于让这两个设置互相打架，而用户两个都明确设过。
@@ -5044,10 +5187,6 @@ function advance(){
     stopWith("播完暂停：停在这里，等你自己按播放");
     return;
   }
-
-  // 临时待播：整列都放过了就把这一列收走，停在这儿。放在最前面 ——
-  // 这一列都没了，后面"下一首是谁"、"循环到第几遍"全都没了意义。
-  if (retireTempIfDone()) return;
 
   if (rules.quota){
     rules.quotaDone++;
@@ -5275,6 +5414,7 @@ function onTime(){
     try{ navigator.mediaSession.setPositionState({ duration:d, position:Math.min(activeEl.currentTime,d), playbackRate:rules.rate }); }catch{}
   }
   nativeState(false);      // 自己带五秒节流；锁屏上那条进度是系统按 PlaybackState 自己推的
+  syncLyricFloat(false);   // 悬浮歌词跟着走；自己按"该显示的东西变了没有"节流
 }
 
 /* ============================================================
@@ -6349,6 +6489,133 @@ let lastAudioId = null;
 
 const lyricsOf = m => (m && (m.lyrics || (m.tags && m.tags.lyrics))) || "";
 
+/* ============================================================
+   悬浮歌词（第二十二批第 7 项）
+   ---- 电脑端是壳里开的那个置顶透明小窗（main.js 的 openLyricWin），
+        手机端是原生悬浮窗（LyricService.java）。
+        两边都**只是显示屏**：正文和"现在唱到哪句"全从这里推过去，
+        窗口那一侧不读库、不管播放（两个窗口各开一份 IndexedDB 会互相盖存档）。
+   ============================================================ */
+
+/* 歌词排成 [{t, text}]，t 是这一句该出现的那一秒。
+   有 LRC 时间轴就照时间轴走 —— 那是作者给的，最准。
+   ⚠️ 没有时间轴就**平均分**到整首曲子上。不这么做的话，浮在桌面上的字
+      从头到尾一动不动，"浮屏歌词"就没意义了。这是市面上播放器的通行做法，
+      也是"歌词没带时间轴"时唯一能做的事。
+   ⚠️ 均分要用时长，而时长可能还没量出来（刚导入、或索引里没有）。那种时候
+      先返回空数组，等 onTime 把时长带出来、缓存键一变自然重算。 */
+let lyricCache = { key: " ", lines: [] };
+function lyricLines(m){
+  const text = lyricsOf(m);
+  if (!m || !text) return [];
+  const dur = (m.duration || activeEl.duration || 0);
+  const key = m.id + "|" + Math.round(dur);
+  if (lyricCache.key === key) return lyricCache.lines;
+
+  const out = [];
+  if (/\[\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?\]/.test(text)){
+    for (const raw of text.split(/\r?\n/)){
+      // 同一句挂好几个时间戳是常见写法（副歌复用），统统收下
+      const stamps = [...raw.matchAll(/\[(\d{1,3}):(\d{1,2}(?:[.:]\d{1,3})?)\]/g)];
+      if (!stamps.length) continue;              // [ti:] [ar:] 这类元信息直接跳过
+      const body = raw.replace(/\[[^\]]*\]/g, "").trim();
+      for (const s of stamps){
+        // 毫秒那一段有的写 [01:23.45]，有的写 [01:23:45]，两种都认
+        const sec = Number(s[1]) * 60 + Number(String(s[2]).replace(":", "."));
+        if (isFinite(sec)) out.push({ t: sec, text: body });
+      }
+    }
+    out.sort((a, b) => a.t - b.t);
+  } else {
+    const rows = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const step = dur > 0 ? dur / rows.length : 0;
+    rows.forEach((r, i) => out.push({ t: i * step, text: r }));
+  }
+  lyricCache = { key, lines: out };
+  return out;
+}
+
+/* 当前唱到第几句。返回 -1 表示还没到第一句（前奏那段）。
+   歌词撑死几百行，而这里是每秒四次的量级 —— 线性扫足够，不用二分。 */
+function lyricAt(lines, t){
+  let i = -1;
+  for (let k = 0; k < lines.length; k++){ if (lines[k].t <= t) i = k; else break; }
+  return i;
+}
+
+const lyricFloat = () => store.settings.lyricFloat === true;
+/* ⚠️ CapLyric 不在这儿声明 —— CAP / onNative 是 16.5 节才有的，在这里求值会撞 TDZ。
+   它跟另外几颗 Cap* 一起住在下面 16.5 节（见「CapLyric 也是自己写的那颗」）。 */
+
+/* 电脑端和手机端收的是同一份 payload，各走各的管子。 */
+function lyricSend(payload){
+  try{
+    if (shellBridge && typeof shellBridge.lyricPush === "function") shellBridge.lyricPush(payload);
+    else if (CapLyric && typeof CapLyric.setText === "function"){
+      const r = CapLyric.setText(payload);
+      if (r && r.catch) r.catch(() => {});
+    }
+  }catch(e){}
+}
+
+/* 上一句 / 这一句 / 下一句。整首歌都唱完了就停在最后一句，next 空着。 */
+function lyricPayload(){
+  const m = player.current;
+  if (!m || m.kind !== "audio") return { prev:"", cur:"", next:"", playing:false, msg:"没在放音频" };
+  const lines = lyricLines(m);
+  if (!lines.length) return { prev:"", cur:"", next:"", playing:player.playing, msg:"这首歌里没有歌词" };
+  const i = lyricAt(lines, activeEl.currentTime || 0);
+  return {
+    prev: i > 0 ? lines[i - 1].text : "",
+    // 前奏那段 i 是 -1 —— 提前把第一句亮出来，别让板子空着
+    cur:  i >= 0 ? lines[i].text : lines[0].text,
+    next: i + 1 < lines.length ? lines[i + 1].text : "",
+    playing: !!player.playing,
+  };
+}
+
+/* 只在"该显示的东西真的变了"的时候才推。onTime 每秒来四发，
+   每发都过一次 IPC / 一次原生调用，纯属白烧电。 */
+let lyricSentKey = " ";
+function syncLyricFloat(force){
+  if (!lyricFloat()){ lyricSentKey = " "; return; }
+  const p = lyricPayload();
+  // 用  当分隔符：歌词里什么字符都可能有，直接拼会撞出假相等
+  const key = [p.prev, p.cur, p.next, p.playing, p.msg || ""].join("");
+  if (!force && key === lyricSentKey) return;
+  lyricSentKey = key;
+  lyricSend(p);
+}
+
+/* 开 / 关。电脑端开的是壳里的窗口，手机端起的是原生悬浮窗服务。
+   ⚠️ 手机端要"显示在其他应用上层"那个权限，用户很可能没给 —— 那就当场
+      把他领到系统设置页去，别只说一句"失败"让他自己猜。 */
+async function applyLyricFloat(){
+  const on = lyricFloat();
+  try{
+    if (shellBridge && typeof shellBridge.lyricOpen === "function"){
+      const r = await shellBridge.lyricOpen(on);
+      if (on && r && r.ok === false) toast("桌面歌词没能打开");
+      else if (on) syncLyricFloat(true);
+      return;
+    }
+    if (CapLyric){
+      if (on){
+        const c = await CapLyric.canDraw();
+        if (!c || !c.granted){
+          await CapLyric.askDraw();       // 领到"显示在其他应用上层"那一页
+          toast("给「听雨」打开这个权限，悬浮歌词才浮得起来");
+          return;
+        }
+      }
+      await CapLyric.setActive({ on });
+      if (on) syncLyricFloat(true);
+      return;
+    }
+  }catch(e){ /* 起不来就只是没有浮窗，不该把别的带塌 */ }
+  if (on) toast("这个版本没有悬浮歌词");
+}
+
 /* 电脑端（>860px）：唱片和台词**并排**站着，两面同时看得见 ——
    翻面就没有意义了（翻面本来就是"一次只放得下一面"才需要的形态）。
    断点只写在这一处，CSS 那份 body.vinyl-wide 由 syncVinylWide() 盖。 */
@@ -7077,19 +7344,32 @@ function markTempDone(m){
   q.done.push(m.id);
   saveLibrary();
 }
-// 都放过了 → 收走这一列，返回 true（调用方别再往下走）
+/* 都放过了 → 收走这一列。返回 true 表示**当前播放列表**就是被收走的那一列
+   （调用方别再往下走，就地停住）。
+   ⚠️ 必须扫**全部**临时待播，不能只看 playlistRef() 那一条。
+      从前只认当前播放列表：用户放着放着去资料库点了别的歌（load 会把
+      store.playlist 换成资料库），那一列临时待播从此再没人认领 ——
+      整列都听完了也永远躺在那儿，正是用户报的那个毛病。
+   ⚠️ 非当前播放列表的那几列只收走 + 报一句，**不许 pause** ——
+      那会平白打断用户这会儿真在听的另一首歌。 */
+function sweepTempQueues(){
+  let retiredCurrent = false;
+  for (const q of store.queues.slice()){          // dropQueue 会重排 store.queues，先切片
+    if (!isTempQueue(q) || !q.ids.length) continue;
+    const done = Array.isArray(q.done) ? q.done : [];
+    if (q.ids.some(id => !done.includes(id))) continue;
+    const isCurrent = store.playlist?.kind === "queue" && store.playlist.id === q.id;
+    const name = q.name;
+    dropQueue(q);
+    toast(`「${name}」放完了，这一列已经收走`);
+    if (isCurrent) retiredCurrent = true;
+  }
+  return retiredCurrent;
+}
 function retireTempIfDone(){
-  const p = playlistRef();
-  if (!p || p.kind !== "queue") return false;
-  const q = findQueue(p.id);
-  if (!isTempQueue(q) || !q.ids.length) return false;
-  const done = Array.isArray(q.done) ? q.done : [];
-  if (q.ids.some(id => !done.includes(id))) return false;
-  const name = q.name;
-  dropQueue(q);
+  if (!sweepTempQueues()) return false;
   activeEl.pause();
   rules.loopDone = 0; rules.quotaDone = 0;
-  toast(`「${name}」放完了，这一列已经收走`);
   paintRules();
   return true;
 }
@@ -7543,6 +7823,73 @@ function setNotif(v){
   if (on) nativeKick();
 }
 for (const k in NOTIF_SEG) $(NOTIF_SEG[k]).addEventListener("click", () => setNotif(k));
+
+/* ---- 换曲时打开唱片页（第二十二批第 2 项）----
+   默认开。关掉之后点上一首/下一首不再自动掀开唱片页 —— 手动点一下播放台
+   照样能进去（openVinyl 不受这个开关管，它管的是"自动"那一下）。 */
+const vinylAuto = () => store.settings.vinylAuto !== false;
+const VINYL_SEG = { on:"segVinylOn", off:"segVinylOff" };
+function syncVinylAutoUI(){
+  for (const k in VINYL_SEG) $(VINYL_SEG[k]).setAttribute("aria-pressed", String(vinylAuto() === (k === "on")));
+}
+function setVinylAuto(v){
+  const on = v === "on";
+  if (vinylAuto() === on) return;
+  store.settings.vinylAuto = on;
+  syncVinylAutoUI(); saveLibrary();
+}
+for (const k in VINYL_SEG) $(VINYL_SEG[k]).addEventListener("click", () => setVinylAuto(k));
+
+/* ---- 悬浮歌词（第二十二批第 7 项）----
+   开关**只有三端里的两端**有：电脑端（壳里的置顶小窗）和安卓端（原生悬浮窗）。
+   网页端两样都够不着，整行收掉 —— 与其留在那儿点了没反应，不如不露脸。 */
+const LYRIC_SEG = { on:"segLyricOn", off:"segLyricOff" };
+function syncLyricRow(){
+  const kind = whereKind();
+  const usable = (kind === "desktop" && shellBridge && typeof shellBridge.lyricOpen === "function")
+              || (kind === "android" && CapLyric);
+  $("rowLyric").toggleAttribute("hidden", !usable);
+  for (const k in LYRIC_SEG)
+    $(LYRIC_SEG[k]).setAttribute("aria-pressed", String(lyricFloat() === (k === "on")));
+  if (kind === "android")
+    $("lyricNote").textContent = "浮在其他应用上面的一条半透明歌词，唱到哪句高亮哪句。"
+      + "第一次开要给它「显示在其他应用上层」的权限。";
+}
+function setLyricFloat(v){
+  const on = v === "on";
+  if (lyricFloat() === on) return;
+  store.settings.lyricFloat = on;
+  syncLyricRow(); saveLibrary();
+  applyLyricFloat();          // 当场生效，不用等下一首
+}
+for (const k in LYRIC_SEG) $(LYRIC_SEG[k]).addEventListener("click", () => setLyricFloat(k));
+
+/* 浮窗被用户自己关掉时（电脑端那颗 × / 安卓浮窗上那颗 ×），两边都会回一声 ——
+   把设置里那颗开关跟着拨回去，不然下次开软件会"设置说开着、实际什么都没有"。
+   ⚠️ **装监听**那一步不在这儿，在文件末尾的启动段（那里 shellBridge 和 CapLyric
+      才声明完）。这一段只放函数本身 —— 放这儿是因为它属于"悬浮歌词"这一摊，
+      而函数声明是不求值的，摆在前面没有 TDZ 问题。 */
+function onLyricClosed(){
+  if (!lyricFloat()) return;
+  store.settings.lyricFloat = false;
+  syncLyricRow(); saveLibrary();
+}
+
+/* ---- 设置的四个标签页（第二十二批第 4 项）----
+   只是把原来竖着排的设置项分组，每一项的功能一个字没动。
+   选哪一页不落盘 —— 它是"看法"不是"设置"，跟「导入方式」那段说明一个待遇。 */
+function setTab(name){
+  for (const b of document.querySelectorAll(".set-tab"))
+    b.setAttribute("aria-selected", String(b.dataset.setTab === name));
+  for (const p of document.querySelectorAll(".set-pane")) p.hidden = true;
+  const pane = $("setPane" + name.charAt(0).toUpperCase() + name.slice(1));
+  if (pane) pane.hidden = false;
+  // 换页别停在上页的滚动位置 —— 新的一页内容少，停在半空看着像坏了
+  const sc = document.querySelector("#setModal .set-scroll");
+  if (sc) sc.scrollTop = 0;
+}
+for (const b of document.querySelectorAll(".set-tab"))
+  b.addEventListener("click", () => setTab(b.dataset.setTab));
 
 /* ============================================================
    10·5. 软件锁
@@ -8049,9 +8396,11 @@ $("navSettings").addEventListener("click", () => {
   syncLayoutUI();
   syncThemeUI();
   syncResumeUI();
+  syncVinylAutoUI();
   syncImportUI();
   syncPickUI();
   syncNotifUI();
+  syncLyricRow();
   syncLockUI();
   setImpHelp(false);
   syncWhereUI();               // 「文件位置」那一行按平台现填（壳 / 安卓 / 网页各一套）
@@ -9697,10 +10046,10 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.7";
+const APP_VERSION = "0.1.8";
 
 const CHANGELOG = [
-  { v: "0.1.7", date: "2026-09-17", title: "教程、保存位置与窗口外观",
+  { v: "0.1.8", date: "2026-09-17", title: "悬浮歌词、设置分页与几处修好",
     items: [
       "侧边栏「教程」能用了 —— 一整页文档式的使用教程，左边目录右边正文",
       "文档格式参考 DeepSeek 接口文档：左侧目录、等宽字排的界面名称、表格对照、常见问题",
@@ -9713,11 +10062,25 @@ const CHANGELOG = [
       "电脑端：右上角那三颗窗口按钮跟着主题换颜色（关灯模式下是暗的）",
       "手机端：系统状态栏、手势条也跟着主题换，通知栏和 Home 键那一带不再是白的",
       "手机端：分享留下的临时副本，下次分享时清掉，超过 24 小时也会自动清",
-      "电脑端：导入的文件存成磁盘上的真实文件，默认放在软件的安装位置，「设置 · 文件位置」里可以换到别的盘",
+      "电脑端：导入的文件存成磁盘上的真实文件，默认放在软件的安装位置，「设置 · 系统 · 文件位置」里可以换到别的盘",
       "电脑端：软件内部不再另存一整份，播放直接读原文件",
       "电脑端：分享文件改成在文件夹里直接选中那个文件，不再生成副本",
       "电脑端：从资料库移除会连磁盘上的真实文件一起删，所以确认键要按住 5 秒",
       "老版本导入的文件会自动搬到磁盘上，搬完问一句「软件里那份要不要删」",
+    ] },
+  { v: "0.1.8", date: "2026-09-17", title: "悬浮歌词、设置分页与几处修好",
+    items: [
+      "悬浮歌词：电脑端浮一个半透明的置顶小窗，手机端浮在别的应用上面，唱到哪句高亮哪句",
+      "悬浮歌词：带时间轴的歌词按时间轴走，没带时间轴的平均分到整首歌上",
+      "悬浮歌词：在「设置 · 播放」里开关，浮窗上那颗 × 关掉之后设置里的开关也会跟着拨回去",
+      "设置分成了四页：外观 / 播放 / 系统 / 安全，翻着找东西不用再一路往下滚",
+      "设置：新增「换曲时打开唱片页」，关掉之后上下一首不再自动弹那张大唱片",
+      "设置、添加列表、播放列表右边加了一条薄荷绿的细滚动条，东西不满一屏时它不露脸",
+      "便携版：文件保存位置改了之后真的记得住了（从前存在临时目录里，退出就被删掉）",
+      "电脑端：装到 Program Files 这类写不进去的目录时，设置退一步存到用户目录，不再默默丢失",
+      "手机端：开屏时图标和软件名不再一顿一顿的（启动时读标签、解时长那批重活挪到开屏之后）",
+      "修好：损坏的文件不再让软件卡住八秒，也不再把它记着的时长冲成零",
+      "修好：临时待播整列听完之后会自己收走了（从前换过页或者开着「播完暂停」就收不走）",
     ] },
   { v: "0.1.6", date: "2026-09-17", title: "文件夹、外观与分享",
     items: [
@@ -9910,6 +10273,7 @@ const GUIDE = [
       <li>波形进度条、逐帧查看、片段循环、标记点</li>
       <li>收藏夹、待播清单、随机临时待播</li>
       <li>歌词页与唱片页，支持读取内嵌歌词，也支持自行填写</li>
+      <li>悬浮歌词：浮在软件外面的一条半透明歌词，唱到哪句高亮哪句</li>
       <li>清新、黑夜、关灯三种外观</li>
       <li>软件锁：九宫格或密码</li>
     </ul>` },
@@ -9927,7 +10291,7 @@ const GUIDE = [
     <p class="gd-p">点击顶栏的 <span class="gd-k">添加文件</span>，在弹出菜单里选择 <span class="gd-k">选择文件</span> 或 <span class="gd-k">选择文件夹</span>。也可以把文件或文件夹直接拖到窗口里。</p>
     <p class="gd-p">导入是批量操作，可以一次选多个文件。导入完成后，条目出现在 <span class="gd-k">资料库 · 音频</span> 或 <span class="gd-k">资料库 · 视频</span> 中，按文件类型自动归类。</p>
     <h2 class="gd-h2">导入方式</h2>
-    <p class="gd-p">在 <span class="gd-k">设置 · 导入方式</span> 中二选一：</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 系统 · 导入方式</span> 中二选一：</p>
     <table class="gd-table">
       <tr><th>方式</th><th>行为</th><th>适合</th></tr>
       <tr><td>保存文件<br><span class="gd-k">电脑版显示为「复制到保存位置」</span></td><td>导入时把文件复制一份收进软件管理的位置。原文件删除、移动都不影响播放。</td><td>希望资料库长期稳定，默认选项</td></tr>
@@ -9935,8 +10299,8 @@ const GUIDE = [
     </table>
     <div class="gd-note">两种方式下，你原来的文件都不会被修改。时长、标签、标记点、片段、播放进度、波形在两种方式下都完整保留。</div>
     <h2 class="gd-h2">电脑版的文件保存位置</h2>
-    <p class="gd-p">电脑版选「复制到保存位置」导入的文件，统一放在 <span class="gd-k">设置 · 文件位置</span> 显示的文件夹里。默认是软件的安装位置，便携版就是程序所在的那个文件夹。</p>
-    <p class="gd-p">在 <span class="gd-k">设置 · 文件位置</span> 点 <span class="gd-k">更改</span> 可以选择其他磁盘上的文件夹。更改在重启软件后生效，已经导入的文件留在原处不动，仍然可以正常播放。</p>
+    <p class="gd-p">电脑版选「复制到保存位置」导入的文件，统一放在 <span class="gd-k">设置 · 系统 · 文件位置</span> 显示的文件夹里。默认是软件的安装位置，便携版就是程序所在的那个文件夹。</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 系统 · 文件位置</span> 点 <span class="gd-k">更改</span> 可以选择其他磁盘上的文件夹。更改在重启软件后生效，已经导入的文件留在原处不动，仍然可以正常播放。</p>
     <div class="gd-note">软件内部不再另存整份副本，播放时直接读取该文件。因此 <span class="gd-k">从资料库移除</span> 会连磁盘上的这个文件一并删除，操作前会要求按住 5 秒确认。以「直接引用原文件」方式导入的条目不受影响，删除条目不会动你的原文件。</div>
     <h2 class="gd-h2">重复导入</h2>
     <p class="gd-p">同一批文件里如果有已经导入过的，会先弹窗询问，可以选择取消导入、都留着，或者用新文件覆盖旧条目。</p>` },
@@ -9944,7 +10308,7 @@ const GUIDE = [
   { id:"library", title:"资料库", lead:"条目的组织与操作。", body:`
     <p class="gd-p">侧栏分四块：<span class="gd-k">资料库</span>（音频、视频）、<span class="gd-k">收藏夹</span>、<span class="gd-k">播放</span>（待播、播放历史等）。顶部是 <span class="gd-k">我的</span> 页面。</p>
     <h2 class="gd-h2">排列方式</h2>
-    <p class="gd-p">在 <span class="gd-k">设置 · 排列方式</span> 中切换 <span class="gd-k">书架</span>（大封面网格）与 <span class="gd-k">列表</span>（一行一条）。</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 外观 · 排列方式</span> 中切换 <span class="gd-k">书架</span>（大封面网格）与 <span class="gd-k">列表</span>（一行一条）。</p>
     <h2 class="gd-h2">条目操作</h2>
     <p class="gd-p">在条目上点右键，或点条目右下角的 <span class="gd-k">⋯</span>，打开操作菜单：</p>
     <table class="gd-table">
@@ -9963,7 +10327,7 @@ const GUIDE = [
     <h2 class="gd-h2">音量</h2>
     <p class="gd-p">点播放台右侧的喇叭展开音量条，可以在 0 到 100 之间拖动，刻度为 25、50、75。点击喇叭本身切换静音。</p>
     <h2 class="gd-h2">接着上次看</h2>
-    <p class="gd-p">每个条目都会记住上次播放到的位置。在 <span class="gd-k">设置 · 接着上次看</span> 中选择三种行为之一：</p>
+    <p class="gd-p">每个条目都会记住上次播放到的位置。在 <span class="gd-k">设置 · 播放 · 接着上次看</span> 中选择三种行为之一：</p>
     <ul class="gd-ul">
       <li><span class="gd-k">自动跳转</span>：打开就直接从上次的位置继续。</li>
       <li><span class="gd-k">点击跳转</span>：先提示上次的位置，点一下才跳过去。</li>
@@ -9982,6 +10346,7 @@ const GUIDE = [
 
   { id:"audio", title:"音频", lead:"唱片页与歌词页。", body:`
     <p class="gd-p">开始播放一首新的音频时，会自动打开唱片页。同一首暂停后再继续不会重复打开；手动关闭后也不会再自动弹出。</p>
+    <div class="gd-note">如果不想让它每次换曲都弹出来，把 <span class="gd-k">设置 · 播放 · 换曲时打开唱片页</span> 拨到「不打开」。关掉之后上下首都不会再弹，想进去点一下播放台就行。</div>
     <h2 class="gd-h2">唱片页</h2>
     <p class="gd-p">显示唱片与当前条目的封面、名称、作者。播放时唱片旋转，暂停时停在原处。</p>
     <h2 class="gd-h2">歌词页</h2>
@@ -9989,6 +10354,21 @@ const GUIDE = [
     <p class="gd-p">歌词优先读取文件里内嵌的那一份。没有内嵌歌词时，可以点右上角的铅笔自行填写，填写的内容会覆盖内嵌歌词并保存在本机。带时间轴的歌词按原文逐行显示，不做同步高亮。</p>
     <h2 class="gd-h2">返回</h2>
     <p class="gd-p">点播放台任意空白处，或按 Esc，回到原来的页面。</p>` },
+
+  { id:"lyricfloat", title:"悬浮歌词", lead:"把歌词浮在软件外面。", body:`
+    <p class="gd-p">在 <span class="gd-k">设置 · 播放 · 悬浮歌词</span> 中开启。开启后，歌词会浮在软件界面之外，唱到哪一句就高亮哪一句，上一句和下一句淡显在上下两侧。</p>
+    <table class="gd-table">
+      <tr><th>平台</th><th>形态</th></tr>
+      <tr><td>电脑版</td><td>一个无边框的置顶小窗，浮在其他窗口上方。拖动窗口任意位置即可移动，位置会记住。右上角的 <span class="gd-k">×</span> 关闭。</td></tr>
+      <tr><td>手机版</td><td>一条浮在其他应用上面的悬浮窗。手指按住拖动即可移动。点右上角的 <span class="gd-k">×</span> 关闭。</td></tr>
+      <tr><td>网页版</td><td>不提供。设置里这一行不会出现。</td></tr>
+    </table>
+    <h2 class="gd-h2">手机版的权限</h2>
+    <p class="gd-p">手机版第一次开启时，会跳到系统的「显示在其他应用上层」设置页。<b>需要在那里手动允许「听雨」</b>，悬浮歌词才能浮起来。这是 Android 对悬浮窗的强制要求，不是软件本身的问题。</p>
+    <div class="gd-note">从浮窗上关闭之后，设置里那颗开关会跟着拨回「关闭」，不需要再去手动改。</div>
+    <h2 class="gd-h2">歌词与时间轴</h2>
+    <p class="gd-p">歌词用的是歌词页里那一份（内嵌歌词，或你自己贴的那段）。带 <span class="gd-k">[mm:ss.xx]</span> 时间轴的歌词按时间轴逐句显示；没有时间轴的歌词会平均分配到整首曲子上依次显示。</p>
+    <div class="gd-note">悬浮歌词只在播放音频时出现，播放视频时不显示。没有歌词的条目会显示一句提示。</div>` },
 
   { id:"collect", title:"收藏夹与待播", lead:"自己组织播放队列。", body:`
     <h2 class="gd-h2">收藏夹</h2>
@@ -10049,7 +10429,7 @@ const GUIDE = [
     <p class="gd-p">电脑版的窗口按钮、手机版的状态栏与手势条会随外观一起变色。软件锁的解锁页和启动画面使用同一套配色。</p>` },
 
   { id:"lock", title:"软件锁", lead:"打开软件前需要先解锁。", body:`
-    <p class="gd-p">在 <span class="gd-k">设置 · 软件锁</span> 中开启，并设置解锁方式：</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 安全 · 软件锁</span> 中开启，并设置解锁方式：</p>
     <ul class="gd-ul">
       <li><span class="gd-k">九宫格</span>：连接至少 4 个点。手机版提供。</li>
       <li><span class="gd-k">密码</span>：输入密码，输对即直接进入，不需要再点确认。输完按回车也可。</li>
@@ -10057,19 +10437,20 @@ const GUIDE = [
     <p class="gd-p">解锁方式在电脑版上只有密码；九宫格仅手机版提供。</p>
     <h2 class="gd-h2">忘记密码</h2>
     <p class="gd-p">在解锁页点 <span class="gd-k">忘记密码</span>，可以选择开始一段倒计时，倒计时结束后软件锁自动关闭。倒计时期间任何人都能进入，因此时长必须事先定好。</p>
-    <p class="gd-p">时长在 <span class="gd-k">设置 · 软件锁 · 忘了密码后等多久自动关</span> 中设置，范围 1 到 720 小时，默认 24 小时。<b>解锁页上不能修改这个时长</b>，只能选择开始或放弃。倒计时一旦开始，剩余时间会显示在解锁页下方，此时仍可退回去继续输密码。</p>
+    <p class="gd-p">时长在 <span class="gd-k">设置 · 安全 · 软件锁 · 忘了密码后等多久自动关</span> 中设置，范围 1 到 720 小时，默认 24 小时。<b>解锁页上不能修改这个时长</b>，只能选择开始或放弃。倒计时一旦开始，剩余时间会显示在解锁页下方，此时仍可退回去继续输密码。</p>
     <div class="gd-note">软件锁保护的是打开软件这一道门。清除应用数据或重装软件会连同软件锁一起清除，它不能代替系统锁屏。</div>` },
 
   { id:"storage", title:"存储与文件位置", lead:"东西存在哪，怎么找到它。", body:`
     <p class="gd-p">资料库数据保存在本机：电脑版在软件的数据目录，手机版在应用私有目录，网页版在浏览器为本站分配的存储空间里。</p>
-    <p class="gd-p">音视频文件本体：电脑版存在 <span class="gd-k">设置 · 文件位置</span> 显示的文件夹里（可以更改），手机版与网页版存在各自的私有空间里。</p>
-    <p class="gd-p">在 <span class="gd-k">设置 · 文件位置</span> 里：</p>
+    <p class="gd-p">音视频文件本体：电脑版存在 <span class="gd-k">设置 · 系统 · 文件位置</span> 显示的文件夹里（可以更改），手机版与网页版存在各自的私有空间里。</p>
+    <p class="gd-p">在 <span class="gd-k">设置 · 系统 · 文件位置</span> 里：</p>
     <ul class="gd-ul">
       <li>电脑版点 <span class="gd-k">在文件夹中显示</span>，打开存放音视频的那个文件夹；点 <span class="gd-k">更改</span> 可以换到其他磁盘。</li>
       <li>手机版点 <span class="gd-k">打开应用信息</span>，进入系统的应用信息页，可以在那里查看占用空间或清除数据。</li>
       <li>网页版没有对应的文件夹，按钮不可用。</li>
     </ul>
-    <div class="gd-note">手机版无法直接打开数据目录，这是 Android 11 起对应用私有目录的限制，不是权限问题。</div>` },
+    <div class="gd-note">手机版无法直接打开数据目录，这是 Android 11 起对应用私有目录的限制，不是权限问题。</div>
+    <div class="gd-note">电脑版改保存位置时，设置本身存在软件旁边（便携版就是程序所在的那个文件夹）。如果那个位置写不进去（比如装在了 Program Files），会退一步存到用户目录里，保证重启之后还记得住。</div>` },
 
   { id:"share", title:"分享文件", lead:"把文件交给别的应用。", body:`
     <p class="gd-p">在条目的操作菜单里选 <span class="gd-k">分享文件</span>。</p>
@@ -10101,7 +10482,13 @@ const GUIDE = [
     <h2 class="gd-h2">视频没有封面，显示的是一张画面。</h2>
     <p class="gd-p">视频没有内嵌封面时，软件自动取第一帧作为封面；播放过一次之后，封面会换成退出时的那一帧。</p>
     <h2 class="gd-h2">为什么播放某些文件没有声音？</h2>
-    <p class="gd-p">软件使用系统自带的解码能力。少数编码格式（如部分无损音频、部分封装格式）系统不支持，此时无法播放。这是解码器的问题，与文件本身是否完整无关。</p>` }
+    <p class="gd-p">软件使用系统自带的解码能力。少数编码格式（如部分无损音频、部分封装格式）系统不支持，此时无法播放。这是解码器的问题，与文件本身是否完整无关。</p>
+    <h2 class="gd-h2">开了悬浮歌词，但桌面上什么都没出现。</h2>
+    <p class="gd-p"><b>手机版</b>：多半是「显示在其他应用上层」这个权限没给。到系统的应用设置里找到「听雨」，打开这一项；也可以在设置里把悬浮歌词关掉再打开一次，会重新跳到授权页。<b>电脑版</b>：确认开关是「开启」，然后看一下屏幕边缘 —— 小窗会记住上次拖到的位置，可能被拖到了屏幕外面或另一个显示器上。</p>
+    <h2 class="gd-h2">便携版改了保存位置，重启之后又变回去了。</h2>
+    <p class="gd-p">这是 0.1.7 及更早版本的问题：便携版把设置写进了系统的临时目录，退出时随临时目录一起被删除。0.1.8 起改为写在便携版程序所在的那个文件夹里，重启后保持不变。</p>
+    <h2 class="gd-h2">换曲时不想让它弹出唱片页。</h2>
+    <p class="gd-p">把 <span class="gd-k">设置 · 播放 · 换曲时打开唱片页</span> 拨到「不打开」即可。手动点播放台仍然可以进入唱片页。</p>` }
 ];
 
 function renderGuide(){
@@ -10271,6 +10658,12 @@ let CapDir = (onNative && CAP.Plugins) ? (CAP.Plugins.Dir || null) : null;
 // Tint 也是自己写的那颗（mobile/android/.../TintPlugin.java）。第二十一批第 5 项的
 // 状态栏 + 手势条配色。**只有安卓有** —— 电脑端走 preload 那条 setChrome 转 IPC。
 let CapTint = (onNative && CAP.Plugins) ? (CAP.Plugins.Tint || null) : null;
+// Lyric 也是自己写的那颗（mobile/android/.../LyricPlugin.java）。第二十二批第 7 项的
+// 悬浮歌词。**只有安卓有** —— 电脑端走壳里那个置顶小窗（preload 的 lyricOpen），
+// 网页端两条路都没有（设置里那一行整个收起来）。
+// ⚠️ 名字占的是 "Lyric" 这个通用词，跟 Share 是同一个道理：哪天真装了同名的官方插件，
+//    得先把这个改掉（两个同名插件在 Plugins 下会打架）。
+let CapLyric = (onNative && CAP.Plugins) ? (CAP.Plugins.Lyric || null) : null;
 
 function exitApp(){
   if (!CapApp) return;
@@ -10528,8 +10921,12 @@ $("btnSaveDir").addEventListener("click", async () => {
       else if (r && r.why === "same")  toast("已经就是这个位置了");
       return;
     }
+    // saved=false：选是选上了，但两处配置都写不进去，这个选择活不过重启。
+    // 与其让用户下次开软件发现又变回去了，不如当场说清楚。
     askConfirm("保存位置已改", `以后导入的文件会存到：${r.dir}\n\n`
-      + "重启软件之后生效。已经导入的文件留在原来的位置不动，照样能播。",
+      + (r.saved === false
+          ? "但这个位置没能记住（配置写不进去），下次打开软件可能会变回去。"
+          : "重启软件之后生效。已经导入的文件留在原来的位置不动，照样能播。"),
       "立刻重启", () => { try { shellBridge.restart(); } catch (e){} });
     cfOkSkin(false);          // 这不是破坏性操作，别穿那件珊瑚色
   }catch(e){ toast("没能改保存位置"); }
@@ -10620,9 +11017,29 @@ applyMediaSession();
 syncLayoutUI();
 syncThemeUI();
 syncResumeUI();
+syncVinylAutoUI();
 syncImportUI();
 syncNotifUI();
+syncLyricRow();
 syncLockUI();
+/* 悬浮歌词（第二十二批第 7 项）。
+   ⚠️ 装监听**必须**放在这儿而不是那段函数旁边：shellBridge 在 10774 才声明、
+      CapLyric 在 10637，写在前面就是一次 TDZ ReferenceError ——
+      而它外面裹着 try/catch，于是会**一声不吭地什么都不做**，
+      表现是"从浮窗上关掉之后，设置里那颗开关还亮着"。 */
+try{
+  if (shellBridge && typeof shellBridge.onLyricState === "function")
+    shellBridge.onLyricState(d => { if (d && d.open === false) onLyricClosed(); });
+}catch(e){}
+try{
+  if (CapLyric && typeof CapLyric.addListener === "function"){
+    const h = CapLyric.addListener("state", d => { if (d && d.open === false) onLyricClosed(); });
+    if (h && h.catch) h.catch(() => {});
+  }
+}catch(e){}
+// 上次开着悬浮歌词的话，开机把它接回来 —— 开关是落盘的，窗口/悬浮窗不是，
+// 不补这一下就成了"设置里开着，实际什么都没有"。
+if (lyricFloat()) setTimeout(() => applyLyricFloat(), 0);
 renderAll();
 drawWave();
 paintRules();
@@ -10699,7 +11116,7 @@ function migrateOldFiles(){
 function askMigrated(done, failed, moved){
   const extra = failed ? `还有 ${failed} 个没能搬过来，它们照旧存在软件里。` : "";
   askConfirm("文件已经搬到磁盘上",
-    `${done} 个文件已经写成真实文件，存在「设置 · 文件位置」那个文件夹里。`
+    `${done} 个文件已经写成真实文件，存在「设置 · 系统 · 文件位置」那个文件夹里。`
     + `${extra}软件里原来那一份要删掉吗？删掉能把空间腾出来，不删也不影响使用，`
     + `只是同一份东西在磁盘上占了两遍。`,
     "全删", () => dropInnerCopies(moved), CF_HOLD_SEC);

@@ -34,6 +34,22 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- 悬浮歌词（第二十二批第 7 项）。和上面那条一样是前台服务：
+             不挂前台的话进程一进后台就被掐，而"切出去看歌词"正是它唯一的用法。
+             ⚠️ 类型报 specialUse。API 34 起每个前台服务都必须报一个类型，
+                而"在别的应用上面浮一条歌词"不属于任何一个既有类型，
+                specialUse 就是为这种情形留的口子 —— 但要**同时**具备
+                下面那条 FOREGROUND_SERVICE_SPECIAL_USE 权限和这个 <property>，
+                少一样 startForeground 直接抛。 -->
+        <service
+            android:name=".LyricService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_lyrics" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -56,4 +72,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 悬浮歌词（第二十二批第 7 项）。三条各管一段：
+         · SYSTEM_ALERT_WINDOW            浮在**别的应用**上面。⚠️ 这是特殊权限，
+                                          装了不会自动有，得用户在系统设置里手点
+                                          （见 LyricPlugin.askDraw 把他领过去）。
+         · FOREGROUND_SERVICE_SPECIAL_USE 上面 LyricService 报的那个 specialUse
+                                          类型（API 34 起强制）。
+         少了 SYSTEM_ALERT_WINDOW 也能编译能装，只是浮窗 addView 的时候
+         抛 BadTokenException —— 所以那颗开关的判据是运行时 canDrawOverlays。 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 </manifest>
