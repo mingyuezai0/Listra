@@ -18,6 +18,7 @@ import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Base64;
+import android.util.Log;
 
 import java.lang.ref.WeakReference;
 
@@ -45,6 +46,7 @@ import java.lang.ref.WeakReference;
  */
 public class MediaService extends Service {
 
+    private static final String TAG = "ListraMedia";
     private static final String CH_ID = "tingyu.playback";
     private static final int NOTIF_ID = 7710;
 
@@ -232,16 +234,31 @@ public class MediaService extends Service {
             }
 
             Notification n = build();
-            if (n == null) return;
+            if (n == null){
+                // ⚠️ 这里绝不能裸 return：服务是 startForegroundService 拉起来的（MediaPlugin:77），
+                //    欠着那次 startForeground 超过 5 秒，系统会抛
+                //    ForegroundServiceDidNotStartInTimeException 直接把进程带走。
+                //    通知栏可以没有，但服务不能"欠一次 startForeground"活着 —— 收干净。
+                setOn(false);      // on/fg 归零 + 撤通知 + stopForeground + stopSelf
+                return;
+            }
             if (!fg){
                 // ⚠️ API 34 起必须报类型，且清单里得有 FOREGROUND_SERVICE_MEDIA_PLAYBACK，
                 //    否则这一句直接抛。类型是 29 才有的常量，得判版本。
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-                    startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-                } else {
-                    startForeground(NOTIF_ID, n);
+                //    单独 try 一层：在这个 catch 里抛等于同样欠着一次 startForeground
+                //    （外面那个 catch 只吞异常、并不会收服务），所以走同一条收尾。
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+                        startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                    } else {
+                        startForeground(NOTIF_ID, n);
+                    }
+                    fg = true;
+                } catch (Exception e){
+                    Log.w(TAG, "startForeground 没成功，收掉服务", e);
+                    setOn(false);
+                    return;
                 }
-                fg = true;
             } else {
                 NotificationManager nm =
                         (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -306,6 +323,19 @@ public class MediaService extends Service {
             MediaPlugin p = plugin();
             if (p != null) p.onAction(cmd, posMs);
         } catch (Exception e){}
+    }
+
+    /**
+     * 用户从最近任务里把应用划掉。页面那头已经没了（声音停了），
+     * 但服务不覆写这一条就会一直活着 —— 通知栏里留一条按不动的壳：
+     * 三颗按钮的回调打到 null 的 plugin 上，看着在那儿，点了什么也不发生。
+     * ⚠️ 不在这儿碰 MediaSession 的 release / setActive：系统随后还会走 onDestroy，
+     *    那边收一次就够；这里重复动它只会撞上非法状态。
+     */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        try { setOn(false); } catch (Exception e){}   // on 置 false + 撤通知 + stopForeground + stopSelf
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override

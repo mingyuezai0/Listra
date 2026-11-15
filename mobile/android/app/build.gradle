@@ -7,8 +7,8 @@ android {
         applicationId "com.mingyuezai0.listra"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "0.1.8"
+        versionCode 10
+        versionName "0.1.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -26,7 +26,9 @@ android {
 
 android.applicationVariants.all { variant ->
     variant.outputs.all {
-        outputFileName = "Listra-0.1.8.apk"
+        // 产物名跟着 versionName 走 —— 从前这里是写死的 "Listra-0.1.8.apk"，
+        // 改了 versionName 之后文件名还停在旧版本上，README 里写的产物名也就对不上了。
+        outputFileName = "Listra-${variant.versionName}.apk"
     }
 }
 

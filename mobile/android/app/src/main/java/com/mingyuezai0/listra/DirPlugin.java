@@ -19,6 +19,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import org.json.JSONException;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * 「选文件夹」在安卓上的那一半（第二十批第 1 项）。
  *
@@ -57,6 +60,20 @@ public class DirPlugin extends Plugin {
 
     /** 递归深度上限（见 ④）。正常的音乐目录不会超过五六层。 */
     private static final int MAX_DEPTH = 12;
+
+    /**
+     * 一次最多收这么多个文件。几万个 JSObject 一次性塞给 JS，
+     * 光 JSON 那一份字符串就能把 WebView 那边噎住（内存 + 解析时间）。
+     * 到顶就停手，已收的照常返回 —— 调用方拿到的是前 N 个，不是空。
+     */
+    private static final int MAX_FILES = 20000;
+
+    /**
+     * 遍历放**单线程**上跑。collect() 是递归 query 整棵 SAF 树，几百上千次
+     * ContentResolver 往返 —— 放在 picked() 里同步跑（主线程）就是一次 ANR。
+     * 单线程就够：一次只选一棵树，串行反而省得两棵树抢 ContentResolver。
+     */
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @PluginMethod
     public void pick(PluginCall call) {
@@ -106,16 +123,52 @@ public class DirPlugin extends Plugin {
             } catch (Exception ignored) {
                 // 有些第三方 provider 不支持持久化。这次的读取照样能用，只是下次得重选。
             }
-            JSObject out = new JSObject();
-            out.put("canceled", false);
-            out.put("uri", tree.toString());
-            JSArray files = new JSArray();
-            collect(tree, DocumentsContract.getTreeDocumentId(tree), files, 0);
-            out.put("files", files);
-            call.resolve(out);
+            final Uri root = tree;
+            // ⚠️ 遍历整棵树（collect 里递归 query）绝不能留在主线程上 —— 大曲库就是一次 ANR。
+            //    所以整段挪到 io 单线程；结果再回 UI 线程落地（call 不能跨线程随便用）。
+            try {
+                io.execute(() -> walk(root, call));
+            } catch (Exception e) {
+                // 线程池已经关了（插件正在销毁）之类。这时候也没人接结果了，报一声就完。
+                call.reject("读不了这个文件夹", e);
+            }
         } catch (Exception e) {
             call.reject("读不了这个文件夹", e);
         }
+    }
+
+    /** io 线程上干全部的脏活，最后统一回主线程 resolve / reject。 */
+    private void walk(Uri tree, PluginCall call) {
+        try {
+            JSArray files = new JSArray();
+            collect(tree, DocumentsContract.getTreeDocumentId(tree), files, 0);
+            JSObject out = new JSObject();
+            out.put("canceled", false);
+            out.put("uri", tree.toString());
+            out.put("files", files);
+            onUi(() -> call.resolve(out));
+        } catch (Exception e) {
+            // 异常也得回主线程 reject —— 在 io 线程上 reject 不是挂死就是炸在别处
+            onUi(() -> call.reject("读不了这个文件夹", e));
+        }
+    }
+
+    /**
+     * 把一句 call.resolve / reject 送回 UI 线程执行。
+     * ⚠️ runOnUiThread 这一**句**自己也会抛（窗口正在销毁、Activity 已 detach），
+     *    所以它也在 try 里；窗口都没了的时候没人在等这个结果，就地落地即可。
+     */
+    private void onUi(Runnable r) {
+        final Activity act = getActivity();
+        try {
+            if (act != null) {
+                act.runOnUiThread(() -> {
+                    try { r.run(); } catch (Exception ignored) {}
+                });
+                return;
+            }
+        } catch (Exception ignored) {}
+        try { r.run(); } catch (Exception ignored) {}
     }
 
     /**
@@ -138,6 +191,8 @@ public class DirPlugin extends Plugin {
                 }, null, null, null);
             if (c == null) return;
             while (c.moveToNext()) {
+                // 到顶就停手：已收的那两万个照常返回，好过把 JS 那边噎死
+                if (out.length() >= MAX_FILES) return;
                 String docId = c.getString(0);
                 String name  = c.getString(1);
                 String mime  = c.getString(2);

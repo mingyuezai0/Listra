@@ -40,11 +40,13 @@
   --mint-100:#E4F8F1;
   --mint-200:#C6F0E1;
   --mint-300:#7FE3C6;
+  --mint-400:#3FD4AC;       /* 输入框聚焦边框用（原来 var(--mint-400) 根本没定义，声明静默失效） */
   --mint-500:#16C79A;       /* 主色。只用在"信号"出现的地方 */
   --mint-600:#0FA47F;
   --mint-700:#0A7A5E;
 
   --ink:#0C1A15;
+  --ink-1:#0C1A15;          /* 教程页正文/悬停用（同上：以前从没定义过，颜色一直退回继承值） */
   --ink-2:#3D4F49;
   --ink-3:#677A74;
 
@@ -61,6 +63,12 @@
   --wave-idle:#CFE4DC;      /* 波形里还没放到的那些柱子 */
   --plate:#0C1A15;          /* 深色小板：提示条、进度气泡 */
   --on-plate:#FFFFFF;
+  /* 压在薄荷实心底上的字。原来写的是 #fff —— 白/薄荷的对比只有 2.2:1，
+     播放键、主按钮、那枚「播放中」小药丸在强光下都是糊的；深墨压薄荷约 7:1。 */
+  --on-mint:#04150F;
+  /* 卡片上那两颗浮层小按钮（⋯ / 拖拽把手）的底。原来两处硬编码白色 ——
+     黑夜模式下白底压浅灰图标，几乎看不见形状，而手机端这两颗是唯一入口。 */
+  --chrome-plate:rgba(255,255,255,.92);
 
   --r-sm:8px; --r-md:12px; --r-lg:18px;
   --sh-1:0 1px 2px rgba(12,26,21,.05), 0 1px 3px rgba(12,26,21,.04);
@@ -114,6 +122,7 @@ html[data-theme="dark"]{
   --mint-ink:#4FDDB6;
 
   --ink:#E6EFEB;
+  --ink-1:#E6EFEB;
   --ink-2:#AFC0BA;
   --ink-3:#7C8D87;
 
@@ -126,6 +135,7 @@ html[data-theme="dark"]{
   /* 深色小板反过来做成浅的 —— 深底上再放深板就看不见了 */
   --plate:#E6EFEB;
   --on-plate:#0B100E;
+  --chrome-plate:rgba(19,26,23,.92);
 
   /* 黑底上影子要压得更黑，不然"浮起来"看着像糊了一层灰 */
   --sh-1:0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
@@ -268,7 +278,7 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
   background:var(--surface);border:1px solid var(--line);color:var(--ink-2);font-size:13px;font-weight:550;
   transition:background .15s,border-color .15s,color .15s;white-space:nowrap}
 .btn:hover{background:var(--mint-100);border-color:var(--mint-200);color:var(--mint-700)}
-.btn.primary{background:var(--mint-500);border-color:var(--mint-500);color:#fff}
+.btn.primary{background:var(--mint-500);border-color:var(--mint-500);color:var(--on-mint)}
 /* 「添加文件」右边那个小箭头：跟文字拉开一点，别和「件」字挤在一起 */
 .btn-caret{margin-left:-2px;opacity:.75}
 .btn[disabled]{opacity:.42;cursor:default}
@@ -483,18 +493,18 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
 /* 卡片上的「⋯」，点开「添加至」 */
 .card-more{
   position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:8px;
-  display:grid;place-items:center;background:rgba(255,255,255,.92);color:var(--ink-2);
+  display:grid;place-items:center;background:var(--chrome-plate);color:var(--ink-2);
   box-shadow:var(--sh-1);opacity:0;transition:opacity .15s,background .15s,color .15s;
 }
 .card:hover .card-more,.card:focus-within .card-more{opacity:1}
-.card-more:hover{background:var(--mint-500);color:#fff}
-.card-more[aria-expanded="true"]{opacity:1;background:var(--mint-500);color:#fff}
+.card-more:hover{background:var(--mint-500);color:var(--on-mint)}
+.card-more[aria-expanded="true"]{opacity:1;background:var(--mint-500);color:var(--on-mint)}
 
 /* 卡片左上角的抓取点，和右上角的「⋯」对称。
    排序必须有个明确的把手 —— 整张卡都能拖的话，点封面播放就没了。 */
 .card-grip{
   position:absolute;top:14px;left:14px;width:26px;height:26px;border-radius:8px;z-index:2;
-  display:grid;place-items:center;background:rgba(255,255,255,.92);color:var(--ink-2);
+  display:grid;place-items:center;background:var(--chrome-plate);color:var(--ink-2);
   box-shadow:var(--sh-1);opacity:0;cursor:grab;touch-action:none;
   transition:opacity .15s,background .15s,color .15s;
 }
@@ -548,14 +558,17 @@ html.is-electron .topbar label{-webkit-app-region:no-drag}
   font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;
   background:var(--mint-100);color:var(--mint-700);vertical-align:1px;flex:0 0 auto}
 .pill.lossy{background:var(--line-2);color:var(--ink-3)}
-.pill.playing{background:var(--mint-500);color:#fff}
+.pill.playing{background:var(--mint-500);color:var(--on-mint)}   /* 9.5px 的小字，白压薄荷只有 2.2:1 */
 
 /* --- 待播队列 --- */
 .queue-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
 .q-row{
   display:grid;grid-template-columns:auto 34px minmax(0,1fr) auto auto auto;
   align-items:center;gap:12px;height:56px;padding:0 12px 0 6px;
-  border-bottom:1px solid var(--line-2);background:var(--surface);position:relative;will-change:transform;
+  /* ⚠️ 这里**不许**常驻 will-change:transform：列表一屏几百行，每行挂一层合成层
+     显存和合成开销跟着行数线性涨，滚动反而更卡（见 .card-tags 那段同一个道理）。
+     真需要提升的是正在拖的那一行 —— .dragging / .shifting 里已经有了。 */
+  border-bottom:1px solid var(--line-2);background:var(--surface);position:relative;
 }
 .q-row:last-child{border-bottom:0}
 .q-row:hover{background:var(--surface-2)}
@@ -837,8 +850,8 @@ body.pip-on .fs-ui{display:none}
 .tbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);
   transition:background .15s,color .15s}
 .tbtn:hover{background:var(--mint-100);color:var(--mint-700)}
-.tbtn.play{width:48px;height:48px;background:var(--mint-500);color:#fff}
-.tbtn.play:hover{background:var(--mint-600);color:#fff}
+.tbtn.play{width:48px;height:48px;background:var(--mint-500);color:var(--on-mint)}
+.tbtn.play:hover{background:var(--mint-600);color:var(--on-mint)}
 .deck-time{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;
   color:var(--ink-3);white-space:nowrap}
 .deck-time b{color:var(--ink-2);font-weight:600}
@@ -872,9 +885,12 @@ body.pip-on .fs-ui{display:none}
   opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;
   z-index:60;
 }
-.vol:hover .vol-pop,.vol.open .vol-pop{
+.vol:hover .vol-pop,.vol.open .vol-pop,.vol:focus-within .vol-pop{
   opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0) scale(1);
 }
+/* ⚠️ :focus-within 那一颗是必须的：#volTrack 有 tabindex="0"、方向键也能调音量，
+   可它住在 .vol-pop 里，而 .vol-pop 只在 hover / .open 时才显形 ——
+   键盘用户 Tab 过去是一片空白，改了音量也看不见任何反馈。 */
 .vol-val{
   font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;
   color:var(--mint-700);font-weight:600;min-width:2.4em;text-align:center;
@@ -988,7 +1004,7 @@ body.pip-on .fs-ui{display:none}
 .pl-row{
   display:grid;grid-template-columns:auto 30px minmax(0,1fr) auto;
   align-items:center;gap:10px;min-height:52px;padding:7px 10px 7px 6px;border-radius:var(--r-sm);
-  background:var(--surface);position:relative;will-change:transform;
+  background:var(--surface);position:relative;   /* 同上：不要常驻 will-change */
   /* 整行都能抓（行里没有"点一下"的动作）。但**不能**写 touch-action:none ——
      那样子指在行上就没法滑着滚这个面板了；触摸走的是长按 200ms 起拖。 */
   cursor:grab;
@@ -1352,11 +1368,14 @@ body.pip-on .fs-ui{display:none}
 .set-scroll:hover:not(textarea)::-webkit-scrollbar-thumb,
 .pick-list:hover:not(textarea)::-webkit-scrollbar-thumb,
 #plPanel:hover:not(textarea)::-webkit-scrollbar-thumb{background:var(--mint-300)}
-/* Firefox / 新标准那条路：`scrollbar-width` 只认粗细认不了颜色，给个细的。
-   上面那组 ::-webkit- 选择器在认得的浏览器里会被这条 @supports 排除掉。 */
-@supports not selector(::-webkit-scrollbar){
-  .set-scroll,.pick-list,#plPanel{scrollbar-width:thin;scrollbar-color:var(--mint-300) transparent}
-}
+/* 标准属性那条路：`scrollbar-width` 只认粗细认不了颜色，给个细的。
+   ⚠️ 不能像从前那样写在 @supports not selector(::-webkit-scrollbar) 里：
+      Chromium 121 起只要 scrollbar-width 不是 auto，就把 ::-webkit-scrollbar
+      整套忽略，而全局那条 *:not(textarea){scrollbar-width:none} 是压在所有人身上的。
+      于是"认 webkit 的浏览器"里这个 @supports 恒为假、::-webkit- 那几条又被 none 压死，
+      结果三处一根滚动条都没有（第 22 批第 3 项等于没做）。
+      正确写法是"全局 none + 这三处显式 thin"：类选择器压得过 *:not(textarea)。 */
+.set-scroll,.pick-list,#plPanel{scrollbar-width:thin;scrollbar-color:var(--mint-300) transparent}
 
 .about-hero{display:flex;flex-direction:column;align-items:center;text-align:center;
   padding-bottom:18px;border-bottom:1px solid var(--line)}
@@ -1878,7 +1897,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
     transform:translateY(8px) scale(.96);transform-origin:bottom right;
     padding:12px 0 14px;
   }
-  .vol:hover .vol-pop,.vol.open .vol-pop{transform:translateY(0) scale(1)}
+  .vol:hover .vol-pop,.vol.open .vol-pop,.vol:focus-within .vol-pop{transform:translateY(0) scale(1)}
   .vol-track{width:34px;height:124px}
   .vol-knob{width:16px;height:16px}
   #vinyl{padding:calc(var(--top-h) + var(--sat) + 12px) 18px calc(var(--deck-h) + var(--sab) + 12px)}
@@ -2600,7 +2619,7 @@ body.vinyl-wide #lyricBackBtn{display:none}
 </div>
 
 <!-- 搜索下拉：跨全部音视频出结果，点一行跳到资料库对应的那一小项 -->
-<div id="searchDrop" hidden></div>
+<div id="searchDrop" role="listbox" aria-label="搜索结果" hidden></div>
 
 <!-- 资料库音频/视频页里那两个筛子共用的下拉（作者 / 标签） -->
 <div id="filterMenu" hidden></div>
@@ -3036,7 +3055,12 @@ const DB = (() => {
       };
       rq.onsuccess = () => res(rq.result);
       rq.onerror = () => rej(rq.error);
+      // ⚠️ 别的标签页 / 别的窗口占着旧连接不放时，升级会永远 pending，
+      //    dbp 永不 resolve —— 表现就是开屏卡住、资料库一个都不出来。
+      rq.onblocked = () => rej(new Error("db blocked"));
     });
+    // 失败就别把失败的 promise 缓存住，下一次调用还能重试
+    dbp.catch(() => { dbp = null; });
     return dbp;
   }
   async function tx(store, mode, fn){
@@ -3046,6 +3070,9 @@ const DB = (() => {
       const r = fn(t.objectStore(store));
       t.oncomplete = () => res(r?.result);
       t.onerror = () => rej(t.error);
+      // 事务被 abort（配额、连接被 versionchange 关掉）时只发 abort、不发 error ——
+      // 少了这一颗，await 会永远悬在那儿，谁也等不到。
+      t.onabort = () => rej(t.error || new Error("tx aborted"));
     });
   }
   return {
@@ -3053,6 +3080,24 @@ const DB = (() => {
     // set 要能报成功失败：存文件本体时会撞上配额上限，静默失败等于骗用户"已经存好了"
     set: (s,k,v) => tx(s, "readwrite", st => st.put(v,k)).then(() => true).catch(() => false),
     del: (s,k)   => tx(s, "readwrite", st => st.delete(k)).catch(() => {}),
+    /* 批量读：同一个只读事务里把 N 个 get 一次性发出去。
+       DB.get 是一条一个事务，开屏接回"本体 + 封面"时一千条库就是两千次往返，
+       串行等下来要好几秒（用户看到的是封面一张一张慢慢冒）。 */
+    batch: async (s, keys) => {
+      if (!keys.length) return new Map();
+      const db = await open();
+      return new Promise((res, rej) => {
+        const t = db.transaction(s, "readonly"), os = t.objectStore(s);
+        const out = new Map();
+        t.oncomplete = () => res(out);
+        t.onerror = () => rej(t.error);
+        t.onabort = () => rej(t.error || new Error("tx aborted"));
+        for (const k of keys){
+          const r = os.get(k);
+          r.onsuccess = () => out.set(k, r.result);
+        }
+      });
+    },
   };
 })();
 
@@ -3069,16 +3114,28 @@ function decodeText(bytes, enc){
 }
 const stripNull = s => s.replace(/\0+$/,"").replace(/^\0+/,"").trim();
 
+/* ⚠️ 只认 v2.3 / v2.4。v2.2 的帧头是 3 字节 id + 3 字节长度，和下面这套 4+4 的读法
+   天生对不上：放它进来只会在第一个"帧"上 break，静默返回 {}，然后悄悄退回用文件名当标题。
+   与其假装读过，不如明确不认 —— 调用方会走 tagsFromName 这条明路。 */
 function parseID3(buf, dv){
   if (buf.byteLength < 10) return null;
   if (dv.getUint8(0)!==0x49 || dv.getUint8(1)!==0x44 || dv.getUint8(2)!==0x33) return null;
   const ver = dv.getUint8(3);
-  if (ver < 2 || ver > 4) return null;
+  if (ver !== 3 && ver !== 4) return null;   // v2.2 的帧头是 3+3 字节，这套读法读不了它
   const size = ((dv.getUint8(6)&0x7f)<<21)|((dv.getUint8(7)&0x7f)<<14)|((dv.getUint8(8)&0x7f)<<7)|(dv.getUint8(9)&0x7f);
   const end = Math.min(10 + size, buf.byteLength);
   const out = {};
   let pos = 10;
   const MAP = { TIT2:"title", TPE1:"artist", TALB:"album", TPE2:"albumartist" };
+  /* flags 的 bit6（0x40）= 有扩展头。带扩展头的文件原来会让 pos 停在扩展头里，
+     第一个"帧"必然不是四个大写字母 —— 于是 break，整份标签丢掉、退回文件名。
+     v2.3 的扩展头长度**不含**自己那 4 字节，v2.4 是连头一起算的同步安全整数。 */
+  if (dv.getUint8(5) & 0x40){
+    const eh = ver === 4
+      ? ((dv.getUint8(10)&0x7f)<<21)|((dv.getUint8(11)&0x7f)<<14)|((dv.getUint8(12)&0x7f)<<7)|(dv.getUint8(13)&0x7f)
+      : ((dv.getUint8(10)<<24)|(dv.getUint8(11)<<16)|(dv.getUint8(12)<<8)|dv.getUint8(13)) + 4;
+    pos = Math.min(end, pos + Math.max(0, eh));
+  }
   while (pos + 10 <= end){
     const id = String.fromCharCode(dv.getUint8(pos),dv.getUint8(pos+1),dv.getUint8(pos+2),dv.getUint8(pos+3));
     if (!/^[A-Z0-9]{4}$/.test(id)) break;
@@ -3569,6 +3626,24 @@ function probeDuration(m){
   });
 }
 
+/* 内嵌封面别按原图存：碟图常见 500KB~3MB（2400×2400 的扫描件），一专辑十来首
+   内嵌同一张就是几十 MB 的配额 —— 而配额正是"把文件整份存进来"要用的那一份。 */
+async function shrinkBlob(blob, max = 480, quality = 0.82){
+  try{
+    if (typeof createImageBitmap !== "function") return blob;
+    const bmp = await createImageBitmap(blob);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (scale >= 1){ if (bmp.close) bmp.close(); return blob; }
+    const cv = document.createElement("canvas");
+    cv.width = Math.max(1, Math.round(bmp.width * scale));
+    cv.height = Math.max(1, Math.round(bmp.height * scale));
+    cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+    if (bmp.close) bmp.close();
+    const out = await new Promise(r => cv.toBlob(r, "image/jpeg", quality));
+    return (out && out.size < blob.size) ? out : blob;   // 缩完反而更大就别换
+  }catch{ return blob; }
+}
+
 /* ---- 视频封面 = 画面帧 ----
    常规视频（webm / mkv / avi / ts）里压根没有封面那一套标签，卡片上永远是个通用图标。
    补两条路：进库时抓第一帧；看过之后，退出时换成"退出那一刻"的那一帧。
@@ -3726,6 +3801,18 @@ function rekeyItem(oldId, newId){
     // 这一列就永远等不到"全部放过"了
     if (Array.isArray(q.done)) q.done = q.done.map(id => id === oldId ? newId : id);
   }
+  /* 播放历史也是**按条目 id 做键**的（store.history[天][id]），lastId 同理，
+     进度那份 posMap 同理。只改收藏夹/待播的话，"覆盖导入"之后这首曲子的次数和时长
+     会挂在旧 id 上（榜单看着像没动），而上次摆上播放台的那条再也找不回来。 */
+  for (const k in store.history){
+    const day = store.history[k];
+    if (!day || !day[oldId]) continue;
+    const a = day[newId] || (day[newId] = { n:0, s:0 });
+    a.n += day[oldId].n || 0; a.s += day[oldId].s || 0;
+    delete day[oldId];
+  }
+  if (store.settings.lastId === oldId) store.settings.lastId = newId;
+  if (posMap[oldId] != null){ posMap[newId] = posMap[oldId]; delete posMap[oldId]; posWriteLater(); }
   DB.del("files", oldId);     // 旧本体、旧波形、旧帧封面都作废了
   DB.del("peaks", oldId);
   DB.del("files", frameKey(oldId));
@@ -3802,11 +3889,18 @@ async function addFiles(files, { silent = false } = {}){
   /* for await 而不是 for of：安卓上"选文件夹"拿到的是一串**还没读进来**的
      文件（见 androidFolderFiles），读一个才有一个 —— 那边不像电脑上，File
      是个懒句柄，不读就是零字节。数组照样吃得下 for await，网页端一个字没变。 */
+  /* ⚠️ 本批自己也要查重。list 里的条目要到下面那句 list.forEach 才进 byId，
+     所以批内互相看不见 —— 同一首歌的两个拷贝、或者干脆把同一个文件拖两次，
+     会进两条**同 id** 的记录：byId 只指后一条，之后删掉其中一条（removeItems 里
+     byId.delete）会让另一条从所有列表里失联，再也点不开。 */
+  const seen = new Set();
   for await (const f of files){
     if (!f || typeof f.name !== "string"){ unknown++; continue; }
     const kind = kindOf(f.name);
     if (!kind){ unknown++; continue; }
     const id = stableId(f);
+    if (seen.has(id)){ dupes++; continue; }
+    seen.add(id);
     const prev = store.byId.get(id);
     if (prev){
       // 上次留下的记录还是"离线"的，这次重新授权把文件挂回去 —— 改过的名字、
@@ -3984,7 +4078,7 @@ async function hydrateMetas(items){
       refreshCover(m);
       // 内嵌封面顺手缓存一份小的。电脑端重启之后 m.tags.cover 是没了，
       // 但封面图本身只有几十 KB —— 缓存它不算"存整份"，却能救回满屏的封面。
-      if (isBlob(m.tags.cover)) DB.set("files", frameKey(m.id), m.tags.cover);
+      if (isBlob(m.tags.cover)) shrinkBlob(m.tags.cover).then(b => DB.set("files", frameKey(m.id), b));
       /* ⚠️ 索引里已经有时长就别再探一遍。从前无条件探，等于每条都建一个媒体元素、
          等 loadedmetadata（读不出来还要干等那个 8 秒超时）—— 库里只要有一条损坏的
          文件，开屏就整整卡 8 秒。而且探失败会返回 0，**把索引里那个好数覆盖掉**，
@@ -4007,8 +4101,34 @@ async function hydrateMetas(items){
   saveLibrary();
 }
 
-/* ---- 持久化 ---- */
-async function saveLibrary(){
+/* ---- 持久化 ----
+   ⚠️ 这一份是**全量投影**：8 个键、每个键一次独立事务，items 那条还带着每条的
+   lyrics / marks / clips。而调用点有五十来处，播放时每五秒还会来一发（savePos）——
+   于是"挪了一秒进度"的代价是整库克隆 + 九次库存写。所以分三层：
+     · saveLibrary()  只打脏标记、200ms 合并一次，真正的写在 writeLibrary()
+     · saveSettings() 只写 settings 这一个键（点一下开关不该重写整个资料库）
+     · 进度（pos）走 meta:positions 那个小对象（见 savePos），根本不碰这份投影 */
+let saveTimer = 0, saveBusy = false, saveDirty = false;
+function saveLibrary(){
+  saveDirty = true;
+  if (saveTimer || saveBusy) return;     // 已经排上了 / 正在写，到时候一并带走
+  saveTimer = setTimeout(flushSave, 200);
+}
+async function flushSave(){
+  saveTimer = 0;
+  if (saveBusy) return;                  // 在飞的那一发回来会再看一眼 saveDirty
+  if (!saveDirty) return;
+  saveDirty = false;
+  saveBusy = true;
+  try{ await writeLibrary(); }
+  finally{
+    saveBusy = false;
+    if (saveDirty) saveLibrary();
+  }
+}
+/* 只改了一个设置项时走这条 —— 省掉另外八个键的重写 */
+function saveSettings(){ DB.set("meta", "settings", store.settings); }
+async function writeLibrary(){
   await DB.set("meta", "library", store.items.map(m => ({
     id:m.id, name:m.name, size:m.size, ext:m.ext, kind:m.kind, lossless:m.lossless,
     duration:m.duration, added:m.added, renamed:m.renamed || "",
@@ -4121,23 +4241,38 @@ async function restoreLibrary(){
   // 再把文件本体从 files 存储里接回来。接上了就不是"离线"了，直接能播。
   // 还是离线的只剩两种：v1 时代存下来的老记录，和当初存失败过的。
   const revived = [];
-  for (const m of store.items){
-    if (!m.offline) continue;
-    if (m.indexed) continue;      // 当初就没存本体，别去库里白翻一趟
-    if (m.path) continue;         // 电脑端：上面那一趟已经判过了，库里本来就没有它的份
-    const blob = await DB.get("files", m.id);
-    if (isBlob(blob)){ m.file = blob; m.offline = false; m.stored = true; revived.push(m); }
+  // 一条一个事务地串行读，一千条库就是一千次往返；合成一次只读事务（见 DB.batch）。
+  const needBody = store.items.filter(m => m.offline && !m.indexed && !m.path);
+  if (needBody.length){
+    const got = await DB.batch("files", needBody.map(m => m.id)).catch(() => new Map());
+    for (const m of needBody){
+      const blob = got.get(m.id);
+      if (isBlob(blob)){ m.file = blob; m.offline = false; m.stored = true; revived.push(m); }
+    }
   }
 
   /* 封面也接回来 —— 它不在 saveLibrary 那份投影里，得单独捞一趟，
      不然重启之后满屏卡片全退回通用图标，用户会以为白看了。
      原来是只管视频（那时只有视频有帧封面）；现在内嵌封面也缓存在同一个键上，
      所以音频一并捞 —— 手机/网页端还是整份存着，本来也不缺这一趟。 */
-  for (const m of store.items){
-    if (m.coverUrl) continue;
-    const blob = await DB.get("files", frameKey(m.id));
-    if (isBlob(blob)){ m.frameCover = blob; refreshCover(m); }
+  const needCover = store.items.filter(m => !m.coverUrl);
+  if (needCover.length){
+    const got = await DB.batch("files", needCover.map(m => frameKey(m.id))).catch(() => new Map());
+    for (const m of needCover){
+      const blob = got.get(frameKey(m.id));
+      if (isBlob(blob)){ m.frameCover = blob; refreshCover(m); }
+    }
   }
+  /* 进度单独存了一份（见 savePos 那段注释），读回来盖到条目上。
+     老存档里没有这个键 —— 那就照用资料库投影里带的 pos，两边都认。 */
+  const posSaved = await DB.get("meta", "positions");
+  if (posSaved && typeof posSaved === "object"){
+    for (const m of store.items){
+      const t = +posSaved[m.id];
+      if (isFinite(t) && t > 0) m.pos = t;
+    }
+  }
+
   const st = await DB.get("meta", "settings");
   if (st){
     if (st.layout === "shelf" || st.layout === "list") store.settings.layout = st.layout;
@@ -4313,12 +4448,32 @@ function rangeStartKey(win, now){
   return "";                                   // 累计：什么都不用滤
 }
 let historyDirty = false;
+/* 按天分桶的"天数封顶"从前只写在注释里：一天一个键、永不删，三年下来一千多个键，
+   而每次落盘都要把整个 history 结构化克隆一遍（还叠加在每五秒一次的进度写上）。
+   这里真收一次：留最近 HISTORY_DAYS 天，更老的并进 "_all" 汇总桶 ——
+   日/周/月/年四个窗口本来就用不到那么老的桶，"累计"那一档 from 是空串，_all 正好被并进去。 */
+const HISTORY_DAYS = 400;
+function pruneHistory(){
+  const keys = Object.keys(store.history).filter(k => k !== "_all").sort();
+  if (keys.length <= HISTORY_DAYS) return;
+  const all = store.history._all || (store.history._all = {});
+  for (const k of keys.slice(0, keys.length - HISTORY_DAYS)){
+    const day = store.history[k] || {};
+    for (const id in day){
+      const a = all[id] || (all[id] = { n:0, s:0 });
+      a.n += day[id].n || 0;
+      a.s += day[id].s || 0;
+    }
+    delete store.history[k];
+  }
+}
 function bumpHistory(id, field, amt){
   const k = dayKey();
   const day = store.history[k] || (store.history[k] = {});
   const rec = day[id] || (day[id] = { n:0, s:0 });
   rec[field] = (rec[field] || 0) + amt;
   historyDirty = true;
+  pruneHistory();
 }
 /* 把某个窗口里所有天的桶并成 id -> {n, s}。已经不在了的条目（从资料库移除了）
    在画的时候会被丢掉，不在这儿丢 —— 这儿只管算数。 */
@@ -4398,13 +4553,22 @@ let filterArtist = "";
 let filterLabel = "";
 let queueBox = null;                        // 待播视图里"有东西可操作"的旗子（改成同一套卡片之后，它不再是容器了）
 
-function matches(m){
-  if (!query) return true;
+/* 搜索串缓存。从前每敲一个键、对每一条都要现拼七段字符串再 toLowerCase ——
+   三千条库就是每个键 3000 次拼接 + 3000 次小写化，中文输入法连打时肉眼可见地卡。
+   缓存靠"内容签名"自己失效：名字/作者/标签/内嵌标签任一变了，拼出来的串就不同，
+   下一次自动重算 —— 不用在每个改名字的地方记着来清一次缓存。 */
+function haystackOf(m){
   const t = m.tags || {};
   // 用户的标签也得搜得到 —— 那一列是他自己填的，搜不到等于白填
-  return (m.name + " " + titleOf(m) + " " + artistOf(m) + " " + (t.title||"") + " " +
-          (t.artist||"") + " " + (t.album||"") + " " + labelsOf(m).join(" "))
-    .toLowerCase().includes(query);
+  const src = m.name + "\u0001" + titleOf(m) + "\u0001" + artistOf(m) + "\u0001" +
+              (t.title || "") + "\u0001" + (t.artist || "") + "\u0001" + (t.album || "") +
+              "\u0001" + labelsOf(m).join(" ");
+  if (!m._hay || m._hay.src !== src) m._hay = { src, low: src.toLowerCase() };
+  return m._hay.low;
+}
+function matches(m){
+  if (!query) return true;
+  return haystackOf(m).includes(query);
 }
 
 // 资料库那两个筛子。只认用户自己填的字段，文件里解析出来的不算数 ——
@@ -4416,6 +4580,32 @@ function passesFilters(m){
 }
 
 function renderAll(){ renderSidebar(); renderMain(); syncTopActions(); }
+
+/* 只更新"哪一条在播"这一件事：卡片/列表行上的 is-current、data-playing，和那枚「播放中」
+   胶囊。不动容器、不动滚动位置 —— 见 load() 末尾那段注释。
+   （侧栏计数、顶栏按钮都不随播放变，除了「当前播放列表」那枚徽标，交给 syncTopActions。） */
+function syncNowPlaying(prevId, nextId){
+  const box = $("viewMain");
+  for (const id of [prevId, nextId]){
+    if (!id) continue;
+    const on = id === nextId;
+    for (const el of box.querySelectorAll(`[data-id="${CSS.escape(id)}"]`)){
+      el.classList.toggle("is-current", on);
+      if (el.classList.contains("card")) el.dataset.playing = on ? "1" : "0";
+      const tags = el.querySelector(".card-tags, .m-tags");
+      if (!tags) continue;
+      const old = tags.querySelector(".pill.playing");
+      if (on && !old){
+        const pill = document.createElement("span");
+        pill.className = "pill playing";
+        pill.textContent = "播放中";
+        // 摆在用户标签（.tags-run）前面，和 cardHTML 里 pillsOf 的顺序一致
+        tags.insertBefore(pill, tags.querySelector(".tags-run"));
+      } else if (!on && old) old.remove();
+    }
+  }
+  syncTopActions();
+}
 
 /* ---- 侧栏 ---- */
 const ICON_HEART = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.2S2.2 9.6 2.2 5.9A3.1 3.1 0 0 1 8 4.4a3.1 3.1 0 0 1 5.8 1.5c0 3.7-5.8 7.3-5.8 7.3z" stroke-linejoin="round"/></svg>`;
@@ -4570,13 +4760,13 @@ function cardHTML(m, i){
   const bits = [ artistOf(m), fmtTime(m.duration), m.ext.toUpperCase() ].filter(Boolean);
   const playing = !!(player.current && player.current.id === m.id);
   return `
-    <div class="card" data-id="${esc(m.id)}" data-i="${i}" data-playing="${playing?1:0}">
-      <button class="card-grip" data-grip="1" aria-label="拖动排序 ${esc(title)}" title="拖动排序">${GRIP}</button>
-      <div class="card-art" role="button" tabindex="0" aria-label="播放 ${esc(title)}">
+    <div class="card" role="listitem" data-id="${esc(m.id)}" data-i="${i}" data-playing="${playing?1:0}">
+      <button class="card-grip" data-grip="1" tabindex="-1" aria-label="拖动排序 ${esc(title)}" title="拖动排序">${GRIP}</button>
+      <div class="card-art" role="button" tabindex="${i === 0 ? 0 : -1}" aria-label="播放 ${esc(title)}">
         ${artOf(m)}
         ${inFav(m.id) ? `<span class="card-fav" title="已加入喜欢" aria-label="已加入喜欢">${HEART_FILL}</span>` : ""}
       </div>
-      <button class="card-more" data-more="${esc(m.id)}" aria-haspopup="menu" aria-expanded="false"
+      <button class="card-more" data-more="${esc(m.id)}" tabindex="-1" aria-haspopup="menu" aria-expanded="false"
               aria-label="更多操作" title="更多操作">${MORE_DOTS}</button>
       <div class="card-name" title="${esc(title)}">${esc(title)}</div>
       <div class="card-meta">${esc(bits.join(" · "))}</div>
@@ -4593,8 +4783,8 @@ function rowHTML(m, i){
                  m.ext.toUpperCase() ].filter(Boolean);
   return `
     <div class="mrow${playing?" is-current":""}" data-id="${esc(m.id)}" data-i="${i}" role="listitem">
-      <button class="m-grip" data-grip="1" aria-label="拖动排序 ${esc(title)}" title="拖动排序">${GRIP}</button>
-      <div class="m-art" role="button" tabindex="0" aria-label="播放 ${esc(title)}">
+      <button class="m-grip" data-grip="1" tabindex="-1" aria-label="拖动排序 ${esc(title)}" title="拖动排序">${GRIP}</button>
+      <div class="m-art" role="button" tabindex="${i === 0 ? 0 : -1}" aria-label="播放 ${esc(title)}">
         ${artOf(m)}
         ${inFav(m.id) ? `<span class="m-fav" title="已加入喜欢" aria-label="已加入喜欢">${HEART_FILL}</span>` : ""}
       </div>
@@ -4603,7 +4793,7 @@ function rowHTML(m, i){
         <div class="m-sub">${esc(bits.join(" · "))}</div>
       </span>
       <span class="m-tags">${labelPills(m)}${pillsOf(m, playing)}</span>
-      <button class="card-more" data-more="${esc(m.id)}" aria-haspopup="menu" aria-expanded="false"
+      <button class="card-more" data-more="${esc(m.id)}" tabindex="-1" aria-haspopup="menu" aria-expanded="false"
               aria-label="更多操作" title="更多操作"
               style="position:static;opacity:1;box-shadow:none;background:none">${MORE_DOTS}</button>
     </div>`;
@@ -4635,12 +4825,14 @@ function filterRowHTML(){
 }
 
 // descCls 用来在手机上藏掉某句提示 —— 手机上既没有拖放也没有"右上角"那个概念
-function emptyHTML(title, desc, withBtn, descCls = ""){
+/* ⚠️ descHTML / descCls 是**直接进 innerHTML** 的（title 走 esc）。所以这里只接受字面量，
+   任何来自用户的数据（收藏夹名、搜索词）都得调用方先 esc —— 全文件就这一处例外。 */
+function emptyHTML(title, descHTML, withBtn, descCls = ""){
   return `<div class="empty"><div>
     <div class="empty-mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M10.6 17.6V5.4l8-1.7v11.6" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="8" cy="17.6" r="2.6"/><circle cx="16" cy="15.3" r="2.6"/></svg></div>
-    <h3>${esc(title)}</h3><p class="${descCls}">${desc}</p>
+    <h3>${esc(title)}</h3><p class="${descCls}">${descHTML}</p>
     ${withBtn ? `<button class="btn primary" id="btnEmptyAdd">添加文件</button>` : ""}
   </div></div>`;
 }
@@ -4686,7 +4878,16 @@ function sortBtnHTML(box){
       aria-label="排序：${label}" title="排序：${label}">${ICON_SORT}<span>${label}</span></button>`;
 }
 
+/* ⚠️ renderMain() 是"整页重画"的唯一入口，它必须**顺带把顶栏那三颗按钮认领回来**。
+   理由见下面 TA 那段注释：innerHTML 一换，装着 TA_ALL 的 .view-head 就出文档了。
+   从前只有 renderAll() 经 syncTopActions() 才搬回去，于是"只调 renderMain()"的那些路
+   （搜索每敲一个字、选筛子、切布局、榜单切档、勾选、拖拽排序）会让三颗按钮当场消失，
+   要等下一次整页导航才回来。所以：真正画的是 paintMain()，renderMain() 管"画完再认领"。 */
 function renderMain(){
+  paintMain();
+  placeTopActions();
+}
+function paintMain(){
   const host = $("viewMain");
   queueBox = null;
 
@@ -4783,7 +4984,7 @@ function renderMain(){
 
   if (route.kind === "coll"){
     const c = findColl(route.id);
-    if (!c){ route = { kind:"audio" }; return renderMain(); }
+    if (!c){ return navTo("audio"); }        // 走正规导航：清筛子、清栈、整页重画都在这儿
     // ⚠️ 这一页画的是**存放顺序**（ids 那个手动次序），不是播放顺序。
     // 排序那四把尺子只管播放，改的是 playOrder() 和「播放列表」下拉里画的次序 ——
     // 页面本身永远照你拖出来的样子摆。
@@ -4802,7 +5003,7 @@ function renderMain(){
 
   if (route.kind === "queue"){
     const q = findQueue(route.id);
-    if (!q){ route = { kind:"audio" }; return renderMain(); }
+    if (!q){ return navTo("audio"); }        // 同上
     // 同收藏夹：页面摆的是存放顺序，排序只影响播放
     const all = viewItems(q);
     const items = all.filter(matches);
@@ -4882,38 +5083,9 @@ function placeTopActions(){
   }
 }
 
-function qRowHTML(m, i){
-  const t = m.tags || {};
-  const cur = player.current && player.current.id === m.id;
-  return `
-    <div class="q-row${cur?" is-current":""}" data-i="${i}" data-id="${esc(m.id)}" tabindex="0"
-         role="listitem" aria-grabbed="false" aria-dropeffect="move">
-      <button class="q-grip" data-grip="1" tabindex="-1" aria-label="拖动排序">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <circle cx="4" cy="2.6" r="1.05"/><circle cx="8" cy="2.6" r="1.05"/>
-          <circle cx="4" cy="6"   r="1.05"/><circle cx="8" cy="6"   r="1.05"/>
-          <circle cx="4" cy="9.4" r="1.05"/><circle cx="8" cy="9.4" r="1.05"/>
-        </svg>
-      </button>
-      <span class="q-idx mono">${String(i+1).padStart(2,"0")}</span>
-      <span style="min-width:0">
-        <div class="q-name">${esc(titleOf(m))}</div>
-        <div class="q-sub">${esc([t.artist, m.ext.toUpperCase(), fmtTime(m.duration)].filter(Boolean).join(" · "))}</div>
-      </span>
-      <span class="q-dur">${fmtTime(m.duration)}</span>
-      <button class="q-more card-more" data-more="${esc(m.id)}" aria-haspopup="menu" aria-expanded="false"
-              aria-label="添加至…" title="添加至…" style="position:static;opacity:1;box-shadow:none;background:none;width:28px;height:28px">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="3.4" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.6" cy="8" r="1.4"/>
-        </svg>
-      </button>
-      <button class="q-del" data-del="1" aria-label="从这个待播移除">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5 5.2 13h5.6l.7-8.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>`;
-}
+/* 待播那一行原来有自己一套模板（qRowHTML + .q-row 那套样式），后来改成和收藏夹
+   共用的 cardHTML / rowHTML。这一份没人调用，留着只会让下一个改待播行的人照着它
+   改一遍、然后发现没反应 —— 删掉。要找回看 git 历史（v0.1.8 之前都在）。 */
 
 /* ---- 导航 ---- */
 /* 返回栈：手机上那颗系统返回键要"回退到上一个页面"。网页里没有 history 可用
@@ -5017,6 +5189,7 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
     return;
   }
   const el = elFor(m);
+  const prevId = player.current ? player.current.id : null;   // 给下面 syncNowPlaying 用
   // 换文件之前先把上一首的坑填上。同类型之间换（audio→audio）走的是同一个元素，
   // 下面直接改 src，过了这村就没这个 currentTime 了。
   if (player.current && player.current.id !== m.id){ savePos(true); flushStats(); }
@@ -5029,8 +5202,9 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
   posSavedAt = 0;                        // 新的一条，第一笔别被节流挡掉
   playedLast = 0;                        // 累计时长按"这一条"重新起算
   m._counted = false;                    // 一次载入只记一次播放次数，暂停再播不算第二遍
-  // 临时待播：这一条真的开播了才记一笔（autoplay:false 那种"载入但不播"不算）
-  if (autoplay) markTempDone(m);
+  /* ⚠️ "这一条听过了"这一笔不在这儿记，记在 setPlaying(true) 里 ——
+     那儿才是"真的放出来了"的时刻。放在 load 里的话，自动播放被拦、或者解码失败，
+     条目已经被记成听过：整列临时待播会被当成"放完了"收走，而用户一个字都没听到。 */
 
   /* 电脑端喂的是 file:// 直读那条 —— 不占内存、不建副本，原文件挪了才失效；
      其余端还是把库里那份 blob 造个网址出来。objectUrl 这个全局只装"我们造的"，
@@ -5044,7 +5218,11 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
   el.muted  = muted;
   el.playbackRate = rules.rate;          // 换一首也接着用这个速度
 
-  if (!auto){ rules.loopDone = 0; rules.quotaDone = 0; clipAt = -1; clipA = clipB = null; }
+  /* A/B 和片段索引是"这一条文件上正在量的一段"，不是循环计数器 —— 从前它们一起锁在
+     !auto 里，自动接下一首时就把上一首的 A/B 带过来了：面板上还写着 03:10→04:20，
+     一点「加片段」就按上一首的秒数在当前文件里记下一个（当前文件不够长时 b 还能大于时长）。 */
+  clipAt = -1; clipA = clipB = null;
+  if (!auto){ rules.loopDone = 0; rules.quotaDone = 0; }
 
   player.current = m;
   // 记下"最后摆上播放台的是哪一条"（第 20 项）。settings 整份跟着 saveLibrary 走，
@@ -5091,7 +5269,9 @@ function load(m, { autoplay = true, auto = false, restore = false } = {}){
   paintRules();
   if (!markPanel.hidden) renderMarkPanel();
   syncFs();
-  renderAll();
+  // 只把那两条（上一条 / 这一条）的"播放中"状态改一改。从前这里整页 renderAll()，
+  // 换一首歌就要重建侧栏 + 整个资料库，滚动位置和 hover 态全被冲掉 —— 只为点亮一行。
+  syncNowPlaying(prevId, m.id);
 }
 
 function renderDeckSub(m){
@@ -5147,7 +5327,13 @@ function shuffleNext(order){
     bag.ids = ids;
     bagWrapped = true;                       // 又洗完一副 = 又绕回来一轮
   }
-  if (!bag.ids.length) return null;
+  if (!bag.ids.length){
+    /* 洗出来是空的 = 整列只有当前这一首（过滤掉自己之后什么都不剩）。
+       从前这里 return null，advance() 里 if (!nx) return 就静默停住了：
+       待播里只放了一首、又开了随机，按"下一首"什么都不会发生，也没有任何提示。
+       这里把它自己放回去 —— 表现就是"重放这一首"，符合直觉。 */
+    return store.byId.get(order[0].id) || null;
+  }
   return store.byId.get(bag.ids.shift()) || null;
 }
 
@@ -5157,8 +5343,9 @@ function next(){
   const m = rules.shuffle ? shuffleNext(order) : stepOrder(order, 1);
   if (m) load(m);
 }
+const PREV_RESTART = 3;      // 过了这个秒数，按「上一首」就是回到本曲开头（播放器的通例）
 function prev(){
-  if (activeEl.currentTime > 3){ activeEl.currentTime = 0; return; }
+  if (activeEl.currentTime > PREV_RESTART){ activeEl.currentTime = 0; return; }
   const order = playOrder() ?? store.items;
   if (!order.length) return;
   const m = rules.shuffle ? shuffleNext(order) : stepOrder(order, -1);
@@ -5240,7 +5427,18 @@ function stopWith(msg){
 // 片段循环：走到 B 就跳到下一段的 A，最后一段接回第一段。
 // **没勾选的地方一律不放**（第 12 项）—— 播放头落在片段外头就把它拎进最近的一段。
 let clipAt = -1;
-const clipList = m => ((m && m.clips) || []).filter(c => c.on && c.b > c.a + 0.2).sort((a,b) => a.a - b.a);
+/* 片段列表每次 timeupdate 都要用一遍，而它只在编辑片段时变 —— 按内容签名缓存。
+   （不缓存的话，播放中一秒要 filter + sort 四遍，60fps 那条 watchdog 上再来四遍。） */
+function clipList(m){
+  if (!m) return [];
+  const clips = m.clips || [];
+  const sig = clips.map(c => `${c.a}:${c.b}:${c.on ? 1 : 0}`).join(",");
+  if (m._clipSig !== sig){
+    m._clipSig = sig;
+    m._clipList = clips.filter(c => c.on && c.b > c.a + 0.2).sort((a, b) => a.a - b.a);
+  }
+  return m._clipList || [];
+}
 function clipTick(){
   const list = clipList(player.current);
   if (!list.length){ clipAt = -1; return; }
@@ -5310,12 +5508,43 @@ function stepFrame(dir){
   onTime();
 }
 
+/* ⚠️ 每颗 handler 都先认一下"这发事件是不是当前这个元素发出来的"。
+   换源时旧元素那些事件是**异步派发**的：等 pause 轮到时 activeEl 已经换成新元素、
+   player.current 也已经是新曲，于是刚起播的新曲被标成暂停（三角闪一下），
+   还顺带多跑一遍 savePos / flushStats / 原子窗那套。
+   loadedmetadata 那条本来就有这道闸（在 applyResume 里），其余几颗当时漏了。 */
 for (const el of [audioEl, videoEl]){
-  el.addEventListener("play",  () => setPlaying(true));
-  el.addEventListener("pause", () => setPlaying(false));
-  el.addEventListener("ended", advance);
-  el.addEventListener("timeupdate", onTime);
+  el.addEventListener("play",  () => { if (el !== activeEl) return; setPlaying(true); });
+  el.addEventListener("pause", () => { if (el !== activeEl) return; setPlaying(false); });
+  el.addEventListener("ended", () => { if (el !== activeEl) return; advance(); });
+  el.addEventListener("timeupdate", () => { if (el !== activeEl) return; onTime(); });
   el.addEventListener("loadedmetadata", () => applyResume(el));
+  // ⚠️ 出错这件事从前没有任何通道：play() 的拒绝一路 .catch 吞掉，ended 永不触发，
+  //    自动接续 / 循环 / 定量全部静默停摆，界面上既不报错也不前进。
+  //    能不能解码只有 error 这一条路（playable() 只查有没有源，查不出"解得开吗"）。
+  el.addEventListener("error", () => { if (el !== activeEl) return; mediaError(el); });
+}
+
+/* ---- 放不出来的时候：说一句人话 ----
+   连续失败要有个闸：整列文件都坏（比如同一目录里混进来的 *.mkv）时，一路 advance()
+   下去会变成"闪一下就跳"，最后整列被跳空。连着三次就停在那儿等用户处理。 */
+let mediaFails = 0;
+const MEDIA_ERR_TEXT = {
+  1: "播放被中断了",
+  2: "读不到这个文件（可能已经被移走或删掉）",
+  3: "这个文件解不开（编码或容器不支持）",
+  4: "这个格式放不出来",
+};
+function mediaError(el){
+  const code = (el && el.error && el.error.code) || 0;
+  const why = MEDIA_ERR_TEXT[code] || "这个文件放不出来";
+  const m = player.current;
+  const who = m ? `「${titleOf(m)}」` : "";
+  mediaFails++;
+  if (mediaFails >= 3){ toast(`${who}${why}，先停在这儿`); return; }
+  const skip = rules.autoNext !== false;
+  toast(`${who}${why}${skip ? "，跳过这一首" : ""}`);
+  if (skip) setTimeout(() => { if (player.current === m) advance(); }, 0);
 }
 // 关页面、切后台各补一笔。手机上是直接被杀掉的，beforeunload 常常不来，
 // visibilitychange 才是真指望得上的那个。写库是异步的，这里只能尽力而为 ——
@@ -5325,6 +5554,7 @@ for (const el of [audioEl, videoEl]){
 addEventListener("beforeunload", () => {
   savePos(true);
   flushStats();
+  if (saveDirty) flushSave();       // 合并没有"等 200ms"的余地了，能写多少写多少
   if (playingVideo()) grabFrame(player.current, videoEl);
 });
 document.addEventListener("visibilitychange", () => {
@@ -5345,6 +5575,7 @@ function setPlaying(p){
   $("icoPause").toggleAttribute("hidden", !p);
   $("btnPlay").setAttribute("aria-label", p ? "暂停" : "播放");
   if (p){
+    mediaFails = 0;                 // 真放出来了就是没坏，失败计数从头算
     startKnob();
     // 播放链路的 AudioContext 可能是"suspended"起来的（比如建图那一刻不在用户
     // 手势里）。真放起来了再叫一次 —— 这时候一定有手势，唤得醒。
@@ -5354,6 +5585,7 @@ function setPlaying(p){
     const m = player.current;
     if (m && playable(m) && !m._counted){
       m._counted = true;
+      markTempDone(m);               // 临时待播记一笔：真的开播了才算听过（见 load 里那段）
       m.plays = (m.plays || 0) + 1;
       bumpHistory(m.id, "n", 1);      // 榜单要按天算次数，所以除了总数还得记一笔今天
       statsDirty = true;
@@ -5402,12 +5634,20 @@ function flushStats(){
   saveLibrary();
 }
 
+let deckTimeKey = "";
 function onTime(){
   clipTick();                       // 片段循环得赶在读数之前把位置扳回来
   const d = activeEl.duration || player.current?.duration || 0;
   tickPlayed();
-  // 「/ 总长」那半截包一层，窄屏用 CSS 藏掉 —— 理由见窄屏块里 #deckTime 那条注释。
-  $("deckTime").innerHTML = `<b>${fmtTime(activeEl.currentTime)}</b><span class="dt-total"> / ${fmtTime(d)}</span>`;
+  /* 「/ 总长」那半截包一层，窄屏用 CSS 藏掉 —— 理由见窄屏块里 #deckTime 那条注释。
+     ⚠️ 只在读数真的变了才重写 innerHTML：这一发一秒跑四次，每写一次 DOM 都要重新排一遍，
+     而绝大部分时候那句话一个字都没变（fmtTime 精确到秒）。 */
+  const cur = fmtTime(activeEl.currentTime), tot = fmtTime(d);
+  const key = cur + "/" + tot;
+  if (key !== deckTimeKey){
+    deckTimeKey = key;
+    $("deckTime").innerHTML = `<b>${cur}</b><span class="dt-total"> / ${tot}</span>`;
+  }
   drawWave(); fsPaint();
   savePos(false);                   // 自己按毫秒节流，一分钟也就写十来次
   if ("mediaSession" in navigator && notifOn() && navigator.mediaSession.setPositionState && isFinite(d) && d > 0){
@@ -5814,6 +6054,10 @@ markPanel.addEventListener("click", e => {
   if (crow){ const i = +crow.dataset.clip; clipAt = -1; jump(clips[i].a); }
 });
 markPanel.addEventListener("keydown", e => {
+  // ⚠️ 焦点落在行里那颗「重命名」「删除」上时，这一发必须让给它。
+  //    不然按空格会 e.preventDefault() 并把 row.click() 顶上去 —— 角色不是"删掉"，
+  //    而是"跳到这个标记并开始播放"，键盘用户根本没法重命名或删标记。
+  if (e.target.closest("button, a, input, textarea, select")) return;
   if (e.key !== "Enter" && e.key !== " ") return;
   const row = e.target.closest("[data-mk],[data-clip]");
   if (!row) return;
@@ -5889,18 +6133,30 @@ function setTitle(box, text){
 let tagsTick = 0;
 function rollCardTags(){
   tagsTick = 0;
-  for (const run of $("viewMain").querySelectorAll(".tags-run")){
-    run.classList.remove("rolling");
-    run.style.removeProperty("--roll");
+  const runs = Array.from($("viewMain").querySelectorAll(".tags-run"));
+  /* 两段式：先把"装不下多少"全部量完（只读，一趟布局），再统一写 class / 变量。
+     从前是每张卡"写 class → 读 clientWidth → 读 rect"交替 —— 一千张卡就是
+     一千次强制同步布局，而补标签期间每 250ms 就整页重画一次，滚动直接掉帧。 */
+  const plan = [];
+  const still = reduceMotion();
+  for (const run of runs){
     const inner = run.firstElementChild;
     if (!inner) continue;
     const avail = run.clientWidth;
-    if (avail <= 0 || reduceMotion()) continue;    // 这一页没在台前（比如正全屏看视频），先不量
+    if (avail <= 0) continue;                      // 这一页没在台前（比如正全屏看视频），先不量
     const over = inner.getBoundingClientRect().width - avail;
     if (over <= 8) continue;                       // 差一点点就算了，滚起来更晃眼
+    plan.push([run, over]);
+  }
+  const rolling = new Set(still ? [] : plan.map(([run]) => run));
+  for (const run of runs){
+    const on = rolling.has(run);
+    run.classList.toggle("rolling", on);
+    if (!on) run.style.removeProperty("--roll");
+  }
+  for (const [run, over] of plan){
     run.style.setProperty("--roll", `-${Math.round(over + 6)}px`);
     run.style.setProperty("--roll-dur", clamp(over / 22, 4, 14).toFixed(1) + "s");
-    run.classList.add("rolling");
   }
 }
 function scheduleTagsRoll(){
@@ -6167,12 +6423,27 @@ const POS_MIN  = 5;        // 秒。不到这个数等于没看过
 const POS_TAIL = 15;       // 秒。离结尾这么近就当看完了，下次从头
 const POS_EVERY = 5000;    // 毫秒。平时五秒落一次盘，暂停/切歌/关页面时立刻补一次
 let posSavedAt = 0;
+/* 进度不进资料库那份全量投影 —— 它是唯一"每五秒变一次"的东西。
+   单独一个小对象 meta:positions = { id: 秒 }，写的时候也只写这一个键。 */
+let posMap = Object.create(null);
+let posWriteTimer = 0;
+function posWriteLater(){
+  if (posWriteTimer) return;
+  posWriteTimer = setTimeout(() => {
+    posWriteTimer = 0;
+    DB.set("meta", "positions", posMap);
+  }, 1200);
+}
 
 const resumeMode = () => RESUME_MODES.includes(store.settings.resume) ? store.settings.resume : "auto";
 
 function savePos(force){
   const m = player.current;
   if (!m) return;
+  /* 这条已经从资料库移除了就别再记账。移除时是"先 pause 再清 player.current"，
+     中间那几发迟到的 pause / timeupdate 还能摸到这条记录 —— 不拦的话它会被重新
+     写回 meta:positions，于是"删掉的条目"在进度表里留下一份再也回收不掉的孤儿。 */
+  if (!store.byId.has(m.id)) return;
   const d = activeEl.duration || m.duration || 0;
   const t = activeEl.currentTime;
   if (!isFinite(t)) return;
@@ -6183,12 +6454,14 @@ function savePos(force){
   posSavedAt = now;
   if (Math.abs((m.pos || 0) - t) < 1) return;          // 挪了不到一秒，不值得写一次库
   m.pos = t;
-  saveLibrary();
+  posMap[m.id] = t;
+  posWriteLater();
 }
 function clearPos(m){
   if (!m || !m.pos) return;
   m.pos = 0;
-  saveLibrary();
+  delete posMap[m.id];
+  posWriteLater();
 }
 /* 开机把上次那条摆回播放台的那一趟（第 20 项）。它取走 resumeQuiet 这一位：
    这一趟**照跳不误、也不吭声** —— 用户要的就是"播放台上显示上次那条和它的进度"，
@@ -6232,7 +6505,8 @@ const MAX_PCM = 250 * 1024 * 1024;
 // decodeAudioData 吐出来的是 float32 PCM，内存和文件大小无关、和时长成正比 ——
 // 一个 60MB 的 3 小时录音能撑到几个 G。先估再解。
 function tooBigToDecode(m){
-  return (m.duration || 0) * 48000 * 4 * 2 > MAX_PCM || m.size > 60 * 1024 * 1024;
+  // 8kHz 之后这条线从约 11 分钟挪到约 80 分钟（一小时的立体声 ≈230MB）
+  return (m.duration || 0) * 8000 * 4 * 2 > MAX_PCM || m.size > 200 * 1024 * 1024;
 }
 let sharedAC = null;
 function audioCtx(){
@@ -6240,11 +6514,29 @@ function audioCtx(){
     sharedAC = new (window.AudioContext || window.webkitAudioContext)();
   return sharedAC;
 }
+/* 画波形用的解码上下文**单开一个**，采样率压到 8kHz。
+   为什么：decodeAudioData 会按上下文自己的采样率重新采样，48kHz 那份 PCM 是它的六倍。
+   这样一张图每桶还有上千个采样点，只回答"这段有没有声音、有多响"完全够，
+   但一小时立体声从 1.4GB 掉到 230MB 上下 —— 从前那条路走 11 分钟就到顶了，
+   于是长播客、整场录音永远只有一条光秃秃的进度条。
+   用 OfflineAudioContext 还顺手解掉"常驻一条音频链路"：解完就没人引用它了。 */
+let decodeAC = null;
+function decodeCtx(){
+  const C = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!C) return audioCtx();                     // 老内核退回共享那个，功能优先
+  if (!decodeAC) decodeAC = new C(1, 1, 8000);
+  return decodeAC;
+}
 
 async function loadWaveform(m){
   wave.peaks = null; wave.key = m.id;
   drawWave();
-  if (tooBigToDecode(m)) return;
+  if (tooBigToDecode(m)){
+    // 别让它无声无息：用户有权知道"这首为什么没有波形"
+    $("waveArea").title = "这首太长（或文件太大），为了不吃光内存没有画波形；进度照样能拖";
+    return;
+  }
+  $("waveArea").removeAttribute("title");
 
   const key = m.id;
   const cached = await DB.get("peaks", key);
@@ -6256,7 +6548,7 @@ async function loadWaveform(m){
     // 已经把它挡在 60MB / 一定时长以内了，整份读进来是安全的。
     const buf = m.file ? await m.file.arrayBuffer()
                        : await (await fetch(m.url)).arrayBuffer();
-    const audio = await audioCtx().decodeAudioData(buf);
+    const audio = await decodeCtx().decodeAudioData(buf);
     const ch = audio.getChannelData(0);
     const step = Math.max(1, Math.floor(ch.length / BUCKETS));
     const peaks = new Float32Array(BUCKETS);
@@ -6279,8 +6571,18 @@ async function loadWaveform(m){
   }
 }
 
+/* 尺寸缓一发。从前每发 timeupdate（一秒四发）都 getBoundingClientRect 一次 ——
+   那是"先写 DOM 再读布局"，每次都是一次强制同步重排。窗口变了才重量。 */
+let waveRect = null;
+function waveSize(){
+  if (!waveRect || !waveRect.width) waveRect = waveArea.getBoundingClientRect();
+  return waveRect;
+}
+addEventListener("resize", () => { waveRect = null; drawWave(); });
+if (window.ResizeObserver) new ResizeObserver(() => { waveRect = null; drawWave(); }).observe(waveArea);
+
 function sizeCanvas(){
-  const r = canvas.getBoundingClientRect();
+  const r = waveSize();
   const dpr = Math.min(devicePixelRatio || 1, 2);
   if (canvas.width !== Math.round(r.width*dpr) || canvas.height !== Math.round(r.height*dpr)){
     canvas.width  = Math.round(r.width  * dpr);
@@ -6318,19 +6620,39 @@ function drawWave(){
   const cut = prog * W;
   /* 颜色在循环**外面**取一次 —— tone() 自己有缓存，但 720 根柱子挨个问一遍也是白搭 */
   const cutColor = tone("--mint-500"), idleColor = tone("--wave-idle");
-  for (let i = 0; i < n; i++){
-    const x = i * bw + gap/2;
-    const h = Math.max(minH, wave.peaks[i] * (H - 8*dpr));
-    ctx2d.fillStyle = (x + barW/2) <= cut ? cutColor : idleColor;
-    ctx2d.fillRect(x, mid - h/2, barW, h);
+  /* 分两趟画（已播 / 未播），每趟只设一次 fillStyle。
+     从前是 720 根柱子挨个赋值 —— 一秒四遍，全在播放时的主线程上。 */
+  for (const [from, to, color] of [[0, cut, cutColor], [cut, W, idleColor]]){
+    if (to <= from) continue;
+    ctx2d.fillStyle = color;
+    for (let i = 0; i < n; i++){
+      const x = i * bw + gap/2;
+      const c = x + barW/2;
+      if (c <= from || c > to) continue;
+      const h = Math.max(minH, wave.peaks[i] * (H - 8*dpr));
+      ctx2d.fillRect(x, mid - h/2, barW, h);
+    }
   }
 }
 
 // 播放头跟手要顺。timeupdate 一秒才来四次，光靠它圆点是一跳一跳的，
 // 所以播放期间单独开一个 rAF，一停就收。
 let knobRaf = 0;
+/* B 点只在 timeupdate 上判（250ms 一发），误差还要乘倍速：3× 时最多越过 0.75 秒才跳回
+   A，听感就是"每圈尾巴长短不一"。圆点这条 rAF 一秒六十发、而且只在播放时跑，
+   正好借它来收口 —— 有它就没有"最后一发 timeupdate 到 B 之间"那段空档。 */
+function clipWatch(){
+  if (clipAt < 0) return;
+  const list = clipList(player.current);
+  if (clipAt >= list.length) return;
+  if (activeEl.currentTime >= list[clipAt].b - 0.02){
+    clipAt = (clipAt + 1) % list.length;
+    activeEl.currentTime = list[clipAt].a;
+  }
+}
 function knobTick(){
   if (!player.playing || !player.current){ knobRaf = 0; return; }
+  clipWatch();
   const dur = activeEl.duration || 0;
   if (dur > 0) $("waveKnob").style.left = (clamp(activeEl.currentTime/dur, 0, 1) * 100) + "%";
   knobRaf = requestAnimationFrame(knobTick);
@@ -6360,7 +6682,11 @@ let peekWant = -1, peekBusy = false;
 function setPeekSource(m){
   if (peekId === (m ? m.id : null)) return;
   peekId = m ? m.id : null;
-  peekWant = -1; peekBusy = false;
+  peekReset();
+  // 换片时画布里还是上一部的最后一帧 —— canvas 不会因为换 src 自己清空，
+  // 第一发 seeked 回来之前划过播放轴，看到的就是"预览给错了片子"。
+  const pcv = $("peekCanvas"), pg = pcv.getContext("2d");
+  pg.clearRect(0, 0, pcv.width, pcv.height);
   if (peekUrl){ URL.revokeObjectURL(peekUrl); peekUrl = null; }
   peekEl.removeAttribute("src");
   if (!m) return;
@@ -6370,11 +6696,24 @@ function setPeekSource(m){
   peekEl.src = got.src;
 }
 
+/* seek 的"在飞"旗子必须有兜底。seeked 不来（片子解不了、src 还没到 readyState、
+   中途换源）时 peekBusy 就永远是 true，之后所有预览都被挡在门外 ——
+   表现是"预览坏了，一直停在旧画面上"，而且一句错都不报。
+   三处一起兜：seeked 正常复位、error/stalled/emptied/abort 强制复位、外加 500ms 超时。 */
+let peekTimer = 0;
+function peekReset(){
+  if (peekTimer){ clearTimeout(peekTimer); peekTimer = 0; }
+  peekBusy = false;
+  peekWant = -1;
+}
 peekEl.addEventListener("seeked", () => {
+  if (peekTimer){ clearTimeout(peekTimer); peekTimer = 0; }
   peekBusy = false;
   if (peekWant >= 0) return peekPump();      // 等待期间又挪了，追上去
   drawPeek();
 });
+for (const ev of ["error", "stalled", "emptied", "abort"])
+  peekEl.addEventListener(ev, peekReset);
 function peekSeek(t){
   peekWant = t;
   if (!peekBusy) peekPump();
@@ -6383,7 +6722,10 @@ function peekPump(){
   if (peekWant < 0) return;
   peekBusy = true;
   const t = peekWant; peekWant = -1;
-  try{ peekEl.currentTime = t; }catch{ peekBusy = false; }
+  try{ peekEl.currentTime = t; }
+  catch{ peekBusy = false; return; }
+  if (peekTimer) clearTimeout(peekTimer);
+  peekTimer = setTimeout(() => { peekTimer = 0; peekBusy = false; }, 500);
 }
 
 function drawPeek(){
@@ -6723,9 +7065,14 @@ function renderLyrics(m){
   body.scrollTop = 0;
 }
 
+/* 正在编辑的是哪一首。⚠️ 不能等保存时再读 player.current —— 编辑途中歌播完自动
+   下一首、或者点一下播放台那两颗（唱片页压在上面，但播放台照样点得着），
+   保存那一刻的 player.current 已经是**另一首**了，词会写串，而且没法撤销。 */
+let lyricEditTarget = null;
 function openLyricEdit(){
   const m = player.current;
   if (!m) return;
+  lyricEditTarget = m;
   lyricEditing = true;
   $("lyricBody").innerHTML = `<textarea class="lyric-input" id="lyricInput" spellcheck="false"
       placeholder="把歌词贴在这儿，或者自己写一段台词…"></textarea>
@@ -6740,18 +7087,28 @@ function openLyricEdit(){
   ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 function saveLyricEdit(){
-  const m = player.current, ta = $("lyricInput");
+  const ta = $("lyricInput");
+  const m = lyricEditTarget || player.current;   // 写回开编辑时那一首，不是"现在这一首"
   if (!m || !ta) return;
   // 写进 m.lyrics 这个**覆盖字段**，和 renamed / artist / labels 一个路子。
   // 绝不写回 m.tags —— hydrateMetas 每次重挂文件都无条件重读一遍标签，写进去下次就没了。
   m.lyrics = ta.value.replace(/\r\n?/g, "\n").replace(/^\n+|\n+$/g, "");
   lyricEditing = false;
-  renderLyrics(m);
+  lyricEditTarget = null;
+  // ⚠️ 歌词缓存得当场作废。它的键只有 id + 时长，改词不改这两样 —— 不清的话
+  //    唱片页立刻是新词，桌面 / 安卓那条浮窗还在一句句推旧词，用户以为没保存。
+  lyricCache = { key: " ", lines: [] };
+  lyricSentKey = " ";
+  if (m === player.current) renderLyrics(m);
   saveLibrary();
-  toast(m.lyrics ? "台词已保存" : "台词已清空");
+  syncLyricFloat(true);
+  toast(m === player.current
+    ? (m.lyrics ? "台词已保存" : "台词已清空")
+    : `台词已存回「${titleOf(m)}」`);
 }
 function cancelLyricEdit(){
   lyricEditing = false;
+  lyricEditTarget = null;
   renderLyrics(player.current);
 }
 
@@ -6801,7 +7158,16 @@ document.querySelector(".deck").addEventListener("click", e => {
 /* ============================================================
    8. 音量 —— 竖排，平时只有一个喇叭
    ============================================================ */
-let volume = 0.7, muted = false;
+/* 音量和静音要落盘 —— 别的设置都记得，就它每次重开回 70%，说不过去。 */
+let volume = Math.min(1, Math.max(0, +store.settings.volume)) || 0.7;
+let muted = store.settings.muted === true;
+let volSaveTimer = 0;
+function volTouch(){
+  store.settings.volume = volume;
+  store.settings.muted = muted;
+  if (volSaveTimer) return;
+  volSaveTimer = setTimeout(() => { volSaveTimer = 0; saveSettings(); }, 300);
+}
 const DETENTS = [0, 0.25, 0.5, 0.75, 1];
 
 function paintVolume(){
@@ -6816,7 +7182,7 @@ function paintVolume(){
   activeEl.volume = volume;
   activeEl.muted  = muted;
 }
-function setVolume(v){ volume = clamp(v, 0, 1); muted = false; paintVolume(); }
+function setVolume(v){ volume = clamp(v, 0, 1); muted = false; paintVolume(); volTouch(); }
 
 function volFromEvent(e){
   const r = $("volTrack").getBoundingClientRect();
@@ -6877,15 +7243,22 @@ volTrack.addEventListener("keydown", e => {
 });
 volTrack.addEventListener("blur", () => volTrack.classList.remove("focused"));
 
-// 滚轮：只在音量控件上生效，别把页面滚动抢走
+// 滚轮：只在音量控件上生效，别把页面滚动抢走。
+// 触控板一次滑动能来二三十发，从前每发固定 ±5%，一格就推到底/推到顶；
+// 现在按 delta 的量级走（一格约 3~5%），再加一道 40ms 的节流。
+let volWheelAt = 0;
 $("vol").addEventListener("wheel", e => {
   e.preventDefault();
-  setVolume(volume - Math.sign(e.deltaY) * 0.05);
+  const now = performance.now();
+  if (now - volWheelAt < 40) return;
+  volWheelAt = now;
+  const step = clamp(Math.abs(e.deltaY) / 120, 0.5, 3) * 0.02;
+  setVolume(volume + (e.deltaY < 0 ? step : -step));
 }, { passive:false });
 
 $("btnMute").addEventListener("click", () => {
   if (isTouch()) $("vol").classList.toggle("open");     // 手机：点喇叭开合滑杆
-  else { muted = !muted; paintVolume(); }               // 桌面：点喇叭静音，滑杆靠 hover
+  else { muted = !muted; paintVolume(); volTouch(); }   // 桌面：点喇叭静音，滑杆靠 hover
 });
 // 手机端点到别处就收起滑杆
 addEventListener("pointerdown", e => {
@@ -7530,7 +7903,18 @@ $("edChips").addEventListener("input", e => {
    ⚠️ pointerdown 上 preventDefault 是必须的 —— 不拦的话输入框会先 blur，
    blur 里那条 hideTagDrop 抢在 click 之前把盒子藏了，这一下就点了个空。 */
 $("edLabelIn").addEventListener("focus", renderTagDrop);
-$("edLabelIn").addEventListener("blur", () => setTimeout(hideTagDrop, 0));
+  /* ⚠️ 焦点移到下拉里那一颗候选上时不能收 —— 从前无条件收，于是 Tab 过去的那一瞬
+     盒子就 hidden 了，候选从焦点序列里消失，键盘用户一个都选不中。
+     判据看 relatedTarget 落在哪儿：还在输入框/候选区里就留着。 */
+  $("edLabelIn").addEventListener("blur", e => {
+    const to = e.relatedTarget;
+    if (to && (to.closest("#edTagDrop") || to.closest("#edChips") || to === $("edLabelIn"))) return;
+    setTimeout(() => {
+      const act = document.activeElement;
+      if (act && act.closest && act.closest("#edTagDrop")) return;
+      hideTagDrop();
+    }, 0);
+  });
 $("edTagDrop").addEventListener("pointerdown", e => e.preventDefault());
 $("edTagDrop").addEventListener("click", e => {
   const b = e.target instanceof Element ? e.target.closest("[data-tag]") : null;
@@ -7701,7 +8085,20 @@ function reallyRemoveItems(list){
   // 存在软件里的文件本体也跟着删掉，不然占着空间还再也回不来。
   // 帧封面是同一条记录带出来的衍生物，一起清 —— 只删本体的话，
   // 同一个文件再导进来命中同一个 id，卡片会显示上一次的那一帧。
-  ids.forEach(id => { DB.del("files", id); DB.del("files", frameKey(id)); });
+  /* 一条条清干净：本体、帧封面、**波形**，还有内存里那张封面 URL。
+     从前只删了前两样 —— peaks 里每删一条就留一份 720 个浮点的孤儿记录（永远回收不掉），
+     而 coverUrl 那条 blob URL 一直活到页面关闭，批量删两百条就白留两百张图。 */
+  for (const m of list){
+    if (m.coverOwned && m.coverUrl) URL.revokeObjectURL(m.coverUrl);
+    m.coverUrl = null; m.coverOwned = false;
+    delete posMap[m.id];
+  }
+  ids.forEach(id => {
+    DB.del("files", id);
+    DB.del("files", frameKey(id));
+    DB.del("peaks", id);
+  });
+  posWriteLater();
   /* 电脑端：搬进「保存位置」的那份真实文件也一并删掉（第 6 项口径："直接连文件一起删"）。
      ⚠️ 只删 owned 的那些。就地引用的一律不碰 —— 那是用户自己的文件，我们只是
         记了个位置，没资格删。主进程那边还会再对一遍白名单，这里只是发起。 */
@@ -7715,7 +8112,12 @@ function reallyRemoveItems(list){
     }
   }
   for (const c of store.collections) c.ids = c.ids.filter(id => !ids.has(id));
-  for (const q of store.queues)      q.ids = q.ids.filter(id => !ids.has(id));
+  for (const q of store.queues){
+    q.ids = q.ids.filter(id => !ids.has(id));
+    // 临时待播的"已听过"名单也得跟着收。只增不减的话：把一列的条目全从资料库删掉，
+    // 这一列就既不满足"都听过"也不满足"有内容"，永远躺在侧栏里再也不会自己收走。
+    if (Array.isArray(q.done)) q.done = q.done.filter(id => q.ids.includes(id));
+  }
 
   renderAll(); saveLibrary();
   toast(list.length > 1 ? `已从资料库移除 ${list.length} 项` : `已从资料库移除「${titleOf(list[0])}」`);
@@ -7732,7 +8134,7 @@ function syncLayoutUI(){
 function setLayout(v){
   if (store.settings.layout === v) return;
   store.settings.layout = v;
-  syncLayoutUI(); renderMain(); saveLibrary();
+  syncLayoutUI(); renderMain(); saveSettings();
 }
 $("segShelf").addEventListener("click", () => setLayout("shelf"));
 $("segList").addEventListener("click", () => setLayout("list"));
@@ -7745,7 +8147,7 @@ function syncResumeUI(){
 function setResume(v){
   if (!RESUME_MODES.includes(v) || resumeMode() === v) return;
   store.settings.resume = v;
-  syncResumeUI(); saveLibrary();
+  syncResumeUI(); saveSettings();
 }
 for (const k in RESUME_SEG) $(RESUME_SEG[k]).addEventListener("click", () => setResume(k));
 
@@ -7762,7 +8164,7 @@ function setTheme(v){
   try{ localStorage.setItem(THEME_KEY, v); }catch{}   // 下次启动要能同步读到的就是这一份
   paintTheme(v);
   drawWave();                                        // 波形画在 canvas 上，令牌换了得重来一趟
-  syncThemeUI(); saveLibrary();
+  syncThemeUI(); saveSettings();
 }
 for (const k in THEME_SEG) $(THEME_SEG[k]).addEventListener("click", () => setTheme(k));
 
@@ -7777,7 +8179,7 @@ function syncImportUI(){
 function setImportMode(v){
   if (!IMPORT_MODES.includes(v) || importMode() === v) return;
   store.settings.importMode = v;
-  syncImportUI(); saveLibrary();
+  syncImportUI(); saveSettings();
 }
 for (const k in IMPORT_SEG) $(IMPORT_SEG[k]).addEventListener("click", () => setImportMode(k));
 
@@ -7791,7 +8193,7 @@ function setPickerAll(v){
   const all = v === "all";
   if (pickerAll() === all) return;
   store.settings.pickerAll = all;
-  syncPickUI(); saveLibrary();
+  syncPickUI(); saveSettings();
 }
 for (const k in PICK_SEG) $(PICK_SEG[k]).addEventListener("click", () => setPickerAll(k));
 
@@ -7816,7 +8218,7 @@ function setNotif(v){
   const on = v === "on";
   if (notifOn() === on) return;
   store.settings.mediaSession = on;
-  syncNotifUI(); saveLibrary();
+  syncNotifUI(); saveSettings();
   applyMediaSession();          // 当场生效，不用等下一首
   // 安卓上还得多这一下（理由见 nativeKick 上面那段）：syncNative 的规矩是
   // "载入了一条才起服务"，拨开关的那一刻通知栏里什么都不会变。
@@ -7836,7 +8238,7 @@ function setVinylAuto(v){
   const on = v === "on";
   if (vinylAuto() === on) return;
   store.settings.vinylAuto = on;
-  syncVinylAutoUI(); saveLibrary();
+  syncVinylAutoUI(); saveSettings();
 }
 for (const k in VINYL_SEG) $(VINYL_SEG[k]).addEventListener("click", () => setVinylAuto(k));
 
@@ -7859,7 +8261,7 @@ function setLyricFloat(v){
   const on = v === "on";
   if (lyricFloat() === on) return;
   store.settings.lyricFloat = on;
-  syncLyricRow(); saveLibrary();
+  syncLyricRow(); saveSettings();
   applyLyricFloat();          // 当场生效，不用等下一首
 }
 for (const k in LYRIC_SEG) $(LYRIC_SEG[k]).addEventListener("click", () => setLyricFloat(k));
@@ -7872,15 +8274,19 @@ for (const k in LYRIC_SEG) $(LYRIC_SEG[k]).addEventListener("click", () => setLy
 function onLyricClosed(){
   if (!lyricFloat()) return;
   store.settings.lyricFloat = false;
-  syncLyricRow(); saveLibrary();
+  syncLyricRow(); saveSettings();
 }
 
 /* ---- 设置的四个标签页（第二十二批第 4 项）----
    只是把原来竖着排的设置项分组，每一项的功能一个字没动。
    选哪一页不落盘 —— 它是"看法"不是"设置"，跟「导入方式」那段说明一个待遇。 */
 function setTab(name){
-  for (const b of document.querySelectorAll(".set-tab"))
-    b.setAttribute("aria-selected", String(b.dataset.setTab === name));
+  for (const b of document.querySelectorAll(".set-tab")){
+    const on = b.dataset.setTab === name;
+    b.setAttribute("aria-selected", String(on));
+    // 一屏 tab 只该有一个 Tab 停靠点，其余用方向键走（WAI-ARIA tabs 的规矩）
+    b.tabIndex = on ? 0 : -1;
+  }
   for (const p of document.querySelectorAll(".set-pane")) p.hidden = true;
   const pane = $("setPane" + name.charAt(0).toUpperCase() + name.slice(1));
   if (pane) pane.hidden = false;
@@ -7890,6 +8296,21 @@ function setTab(name){
 }
 for (const b of document.querySelectorAll(".set-tab"))
   b.addEventListener("click", () => setTab(b.dataset.setTab));
+/* 方向键在四个 tab 之间走，Home/End 到两头 —— 声明的 role="tab" 得配得上行为。 */
+$("setModal").querySelector(".set-tabs").addEventListener("keydown", e => {
+  const tabs = Array.from(document.querySelectorAll(".set-tab"));
+  const at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+  const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+  let next = null;
+  if (step) next = tabs[(at + step + tabs.length) % tabs.length];
+  else if (e.key === "Home") next = tabs[0];
+  else if (e.key === "End") next = tabs[tabs.length - 1];
+  else return;
+  e.preventDefault();
+  setTab(next.dataset.setTab);
+  next.focus();
+});
 
 /* ============================================================
    10·5. 软件锁
@@ -8109,7 +8530,8 @@ const lockForgotHTML = () => `<button class="lock-forgot" id="lockForgot" type="
    ---- 第二十一批第 1 项：倒计时得让人看得见，而且要真的在走 ——
         不然"怎么还不解锁"没有任何地方能回答。1 秒一跳由 armLockTimer 供着。 */
 function paintLockLeft(){
-  const el = $("lockLeft");
+  // 密码页和"等着"那一页各有一处倒计时，id 不能撞（撞了 getElementById 只认头一个）
+  const el = $("lockWaitLeft") || $("lockLeft");
   if (!el) return;
   const ms = lock.on && lock.until ? lock.until - Date.now() : 0;
   if (ms <= 0){ el.hidden = true; el.textContent = ""; return; }
@@ -8182,7 +8604,7 @@ function lockForgetPanel(){
     lockHint("倒计时已经在走了，等着就行", false);
     $("lockBody").innerHTML = `
       <div class="lock-wait">
-        <p class="lock-wait-note" id="lockLeft"></p>
+        <p class="lock-wait-note" id="lockWaitLeft"></p>
         <p class="lock-wait-note">这段时间里谁都进得去。到点后软件锁自己关掉，想接着用得去设置里重新设一个。</p>
         <div class="lock-wait-btns">
           <button class="btn primary" id="lockWaitBack" type="button">回去输密码</button>
@@ -8198,11 +8620,11 @@ function lockForgetPanel(){
       <p class="lock-wait-note">从现在起等 <b>${lock.waitH} 小时</b>，软件锁会自己关掉。</p>
       <p class="lock-wait-note">这个时长是在<b>设置</b>里定好的，这儿改不了。这段时间里谁都进得去，想反悔就趁现在。</p>
       <div class="lock-wait-btns">
-        <button class="btn" id="lockWaitBack" type="button">回去输密码</button>
+        <button class="btn" id="lockWaitBack2" type="button">回去输密码</button>
         <button class="btn primary" id="lockWaitGo" type="button">开始倒计时</button>
       </div>
     </div>`;
-  $("lockWaitBack").addEventListener("click", showLock);
+  $("lockWaitBack2").addEventListener("click", showLock);
   $("lockWaitGo").addEventListener("click", lockStartWait);
 }
 function lockStartWait(){
@@ -8252,8 +8674,10 @@ const lockOn = () => !!lock.on;
 function syncLockUI(){
   $("segLockOn").setAttribute("aria-pressed", String(lockOn()));
   $("segLockOff").setAttribute("aria-pressed", String(!lockOn()));
-  $("segLockPattern").setAttribute("aria-pressed", String(lock.mode === "pattern"));
-  $("segLockPwd").setAttribute("aria-pressed", String(lock.mode === "password"));
+  // 用的是"将要生效的那个方式"：用户点了「九宫格」但还没设完时，开关也该跟着动
+  const modeNow = pendingMode || lock.mode;
+  $("segLockPattern").setAttribute("aria-pressed", String(modeNow === "pattern"));
+  $("segLockPwd").setAttribute("aria-pressed", String(modeNow === "password"));
   // 电脑端只有密码 —— 这一行整个收起来。判据用的是窄屏断点，
   // 和全项目"电脑端 / 手机端"是同一把尺子（见 narrow()）。
   $("lockModeRow").toggleAttribute("hidden", !narrow());
@@ -8285,17 +8709,22 @@ function syncLockUI(){
 let lkStage = 0, lkFirst = "";
 function openLockSet(){
   if (!lockReady()){ toast("这个环境不支持加密，软件锁开不了"); return; }
+  if (!lockOn()) pendingMode = pendingMode || lock.mode;
   // 电脑端只有密码这一条路。挡在"设"这一步，不是挡在"解"那一步 ——
   // 万一有人在窄窗口下画了个九宫格、回头把窗口拉宽了，showLock 得认那把旧锁，
   // 不认就等于把人锁在门外了。
-  if (!narrow()) lock.mode = "password";
+  if (!narrow()) pendingMode = "password";    // 电脑端只支持密码；真的写进 lock 要等 commitLock
   lkStage = 0; lkFirst = "";
   renderLockSet();
   $("lockModal").hidden = false;
 }
-function closeLockSet(){ $("lockModal").hidden = true; $("lkBody").innerHTML = ""; }
+function closeLockSet(){
+  $("lockModal").hidden = true;
+  $("lkBody").innerHTML = "";
+  pendingMode = null;             // 取消换方式：内存里那份 mode 就当没动过
+}
 function renderLockSet(){
-  const pw = lock.mode === "password";
+  const pw = (pendingMode || lock.mode) === "password";
   $("lkTitle").textContent = pw ? "设置密码" : "设置九宫格";
   $("lkNote").textContent = lkStage === 0
     ? (pw ? "输一遍要用的密码。" : "连至少 " + LOCK_MIN + " 个点。")
@@ -8326,6 +8755,8 @@ async function lkPadDone(text){
   await commitLock(text);
 }
 async function commitLock(text){
+  // 到这里才真的改方式：摘要按 lock.mode 做域分隔，两边必须同一刻换
+  if (pendingMode) lock.mode = pendingMode;
   lock.salt = newSalt();
   lock.hash = await lockDigest(text, lock.salt);
   lock.on = true;
@@ -8341,7 +8772,7 @@ async function commitLock(text){
   toast("软件锁已开，下次打开软件时生效");
 }
 $("lkOk").addEventListener("click", async () => {
-  if (lock.mode === "password"){
+  if ((pendingMode || lock.mode) === "password"){
     const v = $("lkPwd").value;
     if (v.length < 4){ $("lkNote").textContent = "密码至少 4 位。"; return; }
     if (lkStage === 0){ lkFirst = v; lkStage = 1; renderLockSet(); return; }
@@ -8363,17 +8794,23 @@ function setLockOn(on){
   lockSave(); syncLockUI();
   toast("软件锁已关");
 }
+/* ⚠️ 换解锁方式必须"先设好再改"，不能反过来。
+   摘要里掺了方式做域分隔（见 lockDigest），所以 mode 一改、hash 还是旧的，两边就对不上。
+   原来是在确认回调里先 lock.mode = next，而 closeLockSet() 不还原 —— 用户点了"重设"
+   又反悔关掉弹窗，旁边随便改一下等待时长就会触发一次 lockSave()，
+   把「新方式 + 旧摘要」写进存档：之后永远解不开，只剩等待 H 小时自动关这一条路。
+   现在改的是 pendingMode，只有 commitLock() 真的设成功才落到 lock.mode 上。 */
+let pendingMode = null;
 function setLockMode(mode){
   const next = mode === "password" ? "password" : "pattern";
-  if (lock.mode === next) return;
+  if ((pendingMode || lock.mode) === next) return;
   if (lockOn()){
-    // 已经开着的时候换方式等于要重设一遍：老摘要掺了方式做域分隔，跟新方式对不上，
-    // 不重设的话下次打开就永远解不开了。所以先把话说清楚再动手。
+    // 已经开着的时候换方式等于要重设一遍。所以先把话说清楚再动手。
     askConfirm("换解锁方式", "换一种解锁方式，原来的密码或图案就用不上了，得重新设一遍。",
-      "重设", () => { lock.mode = next; syncLockUI(); openLockSet(); });
+      "重设", () => { pendingMode = next; openLockSet(); });
     return;
   }
-  lock.mode = next;
+  pendingMode = next;
   syncLockUI();
 }
 $("segLockOn").addEventListener("click", () => setLockOn(true));
@@ -9569,7 +10006,7 @@ $("viewMain").addEventListener("pointerdown", e => {
   if (drag) return;
   const row = e.target.closest(".q-row, .card, .mrow");
   if (!row || !$("viewMain").contains(row)) return;
-  if (e.target.closest("[data-del], [data-more]")) return;
+  if (e.target.closest("[data-more]")) return;
   const ctx = dragCtx();
   if (!ctx || !row.matches(ctx.sel)) return;
   const rows = dragRows(ctx);
@@ -9650,6 +10087,56 @@ let swipe = null, suppressClick = false;
 // 拖完那一下的 click 要被吃掉，但旗子不能一直举着 —— 每一次按下先放平，
 // 否则"拖过一次"之后，随手点卡片的第一下会莫名其妙不响应。
 addEventListener("pointerdown", () => { suppressClick = false; }, true);
+/* 卡片的键盘路径：方向键在卡片之间走、回车播放、菜单键 / Shift+F10 开「更多操作」。
+   从前一张卡有三个 Tab 停靠点（拖拽把手 / 封面 / ⋯），一千条库要走完一页得按三千次 Tab ——
+   纯键盘用户实际上过不去。现在把手和 ⋯ 是 tabindex="-1"（从这张卡上按键到达），
+   卡片本身走 roving tabindex：整个列表只有一个 Tab 停靠点。
+   ⚠️ 上面那段拖拽键盘路（空格起拖）先跑，它 preventDefault 过的话这一发就不接了。 */
+$("viewMain").addEventListener("keydown", e => {
+  if (e.defaultPrevented) return;
+  const art = e.target instanceof Element ? e.target.closest(".card-art, .m-art") : null;
+  if (!art) return;
+  const card = art.closest(".card, .mrow");
+  if (!card) return;
+  const cards = Array.from($("viewMain").querySelectorAll(".card, .mrow"));
+  if (!cards.length) return;
+
+  if (e.key === "Enter" || e.key === " "){
+    e.preventDefault();
+    card.click();                       // 走的是那条统一的点击委托（含"资料库即播放列表"）
+    return;
+  }
+  if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10") || e.key === "m" || e.key === "M"){
+    const more = card.querySelector("[data-more]");
+    if (!more) return;
+    e.preventDefault();
+    more.click();
+    return;
+  }
+  const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1
+            : e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
+  if (!dir) return;
+  e.preventDefault();
+  // 网格：上下按"一行几个"跳；列表：上下就是相邻一条
+  let cols = 1;
+  if (card.classList.contains("card") && cards.length > 1){
+    const rect = (el) => el.getBoundingClientRect();
+    const perRow = cards.filter(c => Math.abs(rect(c).top - rect(card).top) < 4).length;
+    cols = Math.max(1, perRow);
+  }
+  const delta = (e.key === "ArrowDown" || e.key === "ArrowUp") ? dir * cols : dir;
+  const at = cards.indexOf(card);
+  const next = cards[Math.min(cards.length - 1, Math.max(0, at + delta))];
+  const nextArt = next && next.querySelector(".card-art, .m-art");
+  if (!nextArt) return;
+  for (const c of cards){
+    const a = c.querySelector(".card-art, .m-art");
+    if (a) a.tabIndex = -1;
+  }
+  nextArt.tabIndex = 0;
+  try{ nextArt.focus({ preventScroll: false }); }catch{}
+});
+
 $("viewMain").addEventListener("pointerdown", e => {
   // 筛过之后 data-i 和数组下标对不上，左滑会拿掉错的那条
   if (!inQueueView() || e.pointerType === "mouse" || filtering()) return;
@@ -9731,7 +10218,7 @@ function openSearchDrop(){
   searchDrop.innerHTML = hits.length
     ? sdHits.map((m, i) => {
         const sub = [artistOf(m), fmtTime(m.duration)].filter(Boolean).join(" · ");
-        return `<button class="sd-item" role="option" data-i="${i}">
+        return `<button class="sd-item" role="option" id="sd-${i}" data-i="${i}">
           <span class="sd-art">${artOf(m)}</span>
           <span style="min-width:0">
             <div class="sd-name">${esc(titleOf(m))}</div>
@@ -9774,14 +10261,28 @@ function goSearchHit(m){
 function sdMove(d){
   if (searchDrop.hidden || !sdHits.length) return;
   sdAt = (sdAt + d + sdHits.length) % sdHits.length;
-  searchDrop.querySelectorAll(".sd-item").forEach((el, i) => el.classList.toggle("on", i === sdAt));
+  searchDrop.querySelectorAll(".sd-item").forEach((el, i) => {
+    el.classList.toggle("on", i === sdAt);
+    el.setAttribute("aria-selected", String(i === sdAt));
+  });
+  // combobox 的"当前选中项"只有它能告诉读屏 —— 少了这一句，方向键换选项读屏一个字都不出
+  searchInput.setAttribute("aria-activedescendant", "sd-" + sdAt);
   searchDrop.querySelector(".sd-item.on")?.scrollIntoView({ block:"nearest" });
 }
 
-searchInput.addEventListener("input", e => {
-  query = e.target.value.trim().toLowerCase();
+/* 输入防抖：每个键都整页重画太贵了（还会把滚动位置冲掉）。
+   120ms 攒一下；清空（search 事件）和选中那几条路照样立刻重画。 */
+let searchTimer = 0;
+function applySearch(){
+  clearTimeout(searchTimer);
+  searchTimer = 0;
   renderMain();
   openSearchDrop();
+}
+searchInput.addEventListener("input", e => {
+  query = e.target.value.trim().toLowerCase();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applySearch, 120);
 });
 searchInput.addEventListener("keydown", e => {
   if (e.key === "ArrowDown"){ e.preventDefault(); sdMove(1); return; }
@@ -9800,8 +10301,7 @@ searchInput.addEventListener("focus", () => { if (query) openSearchDrop(); });
 // 清空钮（type=search 自带的那颗 ✕）不会发 input
 searchInput.addEventListener("search", () => {
   query = searchInput.value.trim().toLowerCase();
-  renderMain();
-  openSearchDrop();
+  applySearch();
 });
 searchDrop.addEventListener("click", e => {
   const b = e.target.closest("[data-i]");
@@ -10046,10 +10546,31 @@ function walkEntry(entry, out){
    ---- 版本号只在这一处写死。每次更新 +0.0.1，逢十进一（0.1.9 → 0.2.0，
         不使用 0.1.10）—— 跟梦语同一条规矩。新的写在数组最前面。
    ============================================================ */
-const APP_VERSION = "0.1.8";
+const APP_VERSION = "0.1.9";
 
 const CHANGELOG = [
-  { v: "0.1.8", date: "2026-09-17", title: "悬浮歌词、设置分页与几处修好",
+  { v: "0.1.9", date: "2026-11-15", title: "一轮体检：修掉十几处会真坏的地方",
+    items: [
+      "桌面端：在资料库里点搜索框、选筛子、切布局时，右上角那三颗按钮不再突然消失",
+      "Esc 和安卓返回键现在能收掉「更多操作」「侧栏 ⋯」「随机临时待播」和「起名」这几个浮层",
+      "放不出来的文件会说话了：从前是点了没反应、整列静默停住，现在说明原因并跳过这一首（连坏三个就停下来）",
+      "手机端选文件夹不再卡死 —— 整棵目录树挪到后台线程去扫，到两万个文件封顶",
+      "通知栏播放控制：起不来时不会再让进程崩掉；从最近任务划掉软件，那条通知也跟着收走",
+      "手机端悬浮歌词拖到边上不会跑出屏幕，转屏之后也还在看得见的地方",
+      "分享给别的应用的那份副本，不会再被下一次分享删掉（只清超过 12 小时的）",
+      "同一批里重复拖进来的同一个文件，只会进一条记录",
+      "编辑台词时换了另一首，保存不会写到那首身上",
+      "软件锁：换解锁方式点了「重设」又取消，不会再把新方式配着旧密码存进去（从前会把人锁死）",
+      "设置里改一项只写这一项；播放进度单独存 —— 资料库大了不再每五秒整库重写一遍",
+      "开屏接回文件和封面改成一次批量读，封面不再一张一张慢慢冒",
+      "长录音也有波形了（解码采样率降到 8kHz，从约 11 分钟放宽到约 80 分钟）",
+      "搜索更快：输入不再每个键重建整页；换一首也不再整页重画",
+      "键盘：一张卡只有一个 Tab 停靠点，方向键在卡片之间走、回车播放、菜单键开「更多操作」",
+      "弹窗把背后那页真正挡住了（读屏和 Tab 都进不去），关掉后焦点回到原处",
+      "调过的音量会被记住；细滚动条在 Chrome / 桌面版里也真的画出来了",
+      "薄荷实心底上的字改成深墨（白压薄荷只有 2.2:1，强光下看不清）；黑夜模式下卡片上那两颗小按钮不再白底配浅灰图标",
+    ] },
+  { v: "0.1.7", date: "2026-09-17", title: "教程、保存位置与窗口外观",
     items: [
       "侧边栏「教程」能用了 —— 一整页文档式的使用教程，左边目录右边正文",
       "文档格式参考 DeepSeek 接口文档：左侧目录、等宽字排的界面名称、表格对照、常见问题",
@@ -10563,6 +11084,10 @@ function closeTopLayer(){
   if (!$("editModal").hidden){ closeEdit(); return true; }
   if (!$("infoModal").hidden){ closeInfo(); return true; }
   if (!$("setModal").hidden){ $("setModal").hidden = true; return true; }
+  // 这两个也是盖整屏的弹窗，从前只是各自挂了局部 keydown —— 焦点在里头时 Esc 管用，
+  // 安卓返回键和"焦点已经跑到别处"的 Esc 就收不掉它们。
+  if (!$("randModal").hidden){ closeRand(); return true; }
+  if (!$("nameModal").hidden){ closeName(); return true; }
   // 教程页也盖着整屏，和唱片页同一个道理，排在两个面板前面
   if (!$("guidePage").hidden){ closeGuide(); return true; }
   // 唱片页排在两个面板前面：它盖着整屏，看不见的下层不该抢先接走 Esc
@@ -10576,6 +11101,11 @@ function closeTopLayer(){
   if (!plPanel.hidden || !sortMenu.hidden || !queueMenu.hidden || !addFileMenu.hidden){
     closePlPanel(); closeSortMenu(); closeQueueMenu(); closeAddFileMenu(); return true;
   }
+  // 「更多操作」和侧栏那串 ⋯ 是两个浮层菜单，原来只顾着让它们"点外面就收"：
+  // addMenu 一按 Esc 会落到下面那句"有浮层就让路"里白白吃掉，navMenu 连那句都没有，
+  // Esc 直接穿透去动播放台；安卓返回键则一路滑到"要退出听雨吗"。补进这条链子。
+  if (!addMenu.hidden){ closeAddMenu(); return true; }
+  if (!navMenu.hidden){ closeNavMenu(); return true; }
   return false;
 }
 
@@ -10604,9 +11134,10 @@ addEventListener("keydown", e => {
     case "ArrowLeft":  if (e.shiftKey) prev(); else { e.preventDefault(); activeEl.currentTime -= 5; } break;
     case "ArrowUp":   e.preventDefault(); setVolume(volume + 0.05); break;
     case "ArrowDown": e.preventDefault(); setVolume(volume - 0.05); break;
-    case "m": case "M": muted = !muted; paintVolume(); break;
-    case "Escape": closeAddMenu(); closePicker(); closePlPanel(); closeSortMenu(); closeQueueMenu();
-                   $("setModal").hidden = true; break;
+    case "m": case "M": muted = !muted; paintVolume(); saveSettings(); break;
+    // ⚠️ 这里原本还有一条 case "Escape" 去关 addMenu / picker / plPanel / setModal ——
+    //    一句都走不到：上面 closeTopLayer() 已经把这几层收掉了，没开的时候又会
+    //    被"有浮层就让路"那句 return 掉。留在那儿只会误导下一个改这块的人。
   }
 });
 
@@ -11040,6 +11571,78 @@ try{
 // 上次开着悬浮歌词的话，开机把它接回来 —— 开关是落盘的，窗口/悬浮窗不是，
 // 不补这一下就成了"设置里开着，实际什么都没有"。
 if (lyricFloat()) setTimeout(() => applyLyricFloat(), 0);
+/* ============================================================
+   15·5. 弹窗的公共行为：语义、焦点、背景隔离
+   ---- 十一个业务弹窗都是同一个 .modal 壳，所以这三件事在一处做，不用逐个 open/close 改：
+        · 补 role="dialog" / aria-modal="true" / aria-labelledby（指向它自己的标题）
+        · 打开时给 .app 挂 inert —— 读屏和 Tab 都进不去背后那一页
+          （从前锁屏露着的时候，键盘还能 Tab 到底下的播放键按回车）
+        · 记下打开前焦点在哪，关掉还回去（Esc 关掉之后不该掉回 <body> 从页首重来）
+   用 observer 而不是在每个开关点上补一句：弹窗有十几处开关，漏一处就是那一处背后
+   还能 Tab 进去，而这种漏是静默的、没人会注意到。 */
+function modalSemantics(){
+  for (const m of document.querySelectorAll(".modal")){
+    if (!m.hasAttribute("role")) m.setAttribute("role", "dialog");
+    m.setAttribute("aria-modal", "true");
+    if (!m.hasAttribute("aria-labelledby")){
+      const h = m.querySelector("h3, .modal-title, .set-tabs");
+      if (h){
+        if (!h.id) h.id = (m.id || "modal") + "Title";
+        if (h.tagName === "H3" || h.classList.contains("modal-title")) m.setAttribute("aria-labelledby", h.id);
+      }
+    }
+  }
+}
+modalSemantics();
+const modalFocus = new Map();
+function modalSync(){
+  const open = Array.from(document.querySelectorAll(".modal")).filter(m => !m.hidden);
+  const app = document.querySelector(".app");
+  if (!app) return;
+  /* ⚠️ 只 inert .app 的**非弹窗**子节点。这十一个弹窗本身就住在 .app 里，
+     整块 inert 会把弹窗里的输入框和按钮一起冻住 —— 连焦点都进不去
+     （冒烟测试里 focusInside:false 就是这么来的）。 */
+  for (const child of app.children){
+    if (child.classList && child.classList.contains("modal")) continue;
+    child.toggleAttribute("inert", open.length > 0);
+  }
+}
+new MutationObserver(muts => {
+  let opened = null, closed = null;
+  for (const mu of muts){
+    const el = mu.target;
+    if (!(el instanceof Element) || !el.classList || !el.classList.contains("modal")) continue;
+    if (el.hidden) closed = el; else opened = el;
+  }
+  if (closed){
+    const back = modalFocus.get(closed);
+    modalFocus.delete(closed);
+    modalSync();
+    if (back && back.isConnected && typeof back.focus === "function"){
+      try{ back.focus({ preventScroll:true }); }catch{}
+    }
+  }
+  if (opened){
+    if (!modalFocus.has(opened)) modalFocus.set(opened, document.activeElement);
+    modalSync();
+    /* 焦点先给"要打字的地方"，没有就给主按钮，再没有就给第一个可聚焦的东西。
+       ⚠️ 必须挑**当前可见**的那一个：设置弹窗里四个页签的内容都挂在 DOM 上，
+         前面几页是 hidden 的，querySelector 会先撞上一个看不见的 input ——
+         对隐藏元素调 focus() 是静默无效的，焦点于是还留在原处（冒烟测试抓到过）。 */
+    const pick = (sel) => Array.from(opened.querySelectorAll(sel))
+      .find(el => !el.disabled && el.getClientRects().length > 0);
+    const target = pick("input:not([type=hidden]), textarea")
+                || pick(".btn.primary, button.primary")
+                || pick('button, [href], [tabindex]:not([tabindex="-1"])');
+    if (target && !opened.contains(document.activeElement)){
+      setTimeout(() => {
+        if (opened.hidden) return;
+        try{ target.focus({ preventScroll:true }); }catch{}
+      }, 30);
+    }
+  }
+}).observe(document.body, { subtree:true, attributes:true, attributeFilter:["hidden"] });
+
 renderAll();
 drawWave();
 paintRules();

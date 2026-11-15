@@ -56,6 +56,9 @@ public class MediaPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         try { MediaService.attach(null); } catch (Exception e){}
+        // 只断回调不够：服务还活着，通知栏就留一条按不动的空壳（动作打到 null 上）。
+        // 顺手发一次 A_OFF —— 和 setActive(false) 走的是同一条路，服务自己会收掉。
+        poke(MediaService.A_OFF);
     }
 
     /**

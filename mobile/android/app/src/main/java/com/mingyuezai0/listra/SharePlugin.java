@@ -38,8 +38,9 @@ import java.io.OutputStream;
  *    在后台线程上调不一定崩，但可能**静默失败** —— "按了没反应"最难查。
  * ③ 文件一定放在 cacheDir 里。放 filesDir 的话用户清缓存清不掉，
  *    一部片子的副本就永远躺在那儿了。系统清 cacheDir 是随时的事，正合适。
- * ④ 每次 begin 都要把上一批清干净。否则分享十次就攒十份副本，
- *    而且都是几百兆的。
+ * ④ 每次 begin 都要顺手清掉过期的旧副本。不然分享十次就攒十份副本，
+ *    而且都是几百兆的。但**不能**无条件清空：上一份可能正被外部播放器读着
+ *    （见 clearOld，只按 CLEAR_TTL_MS 删老的）。
  *
  * ⚠️ 插件名占的是 "Share" 这个通用词。@capacitor/share 没有装，
  *    哪天真装了得先把这个改掉 —— 两个同名插件在 window.Capacitor.Plugins 下会打架。
@@ -52,6 +53,14 @@ public class SharePlugin extends Plugin {
 
     /** 副本最长留 24 小时（第二十一批第 7 项）。 */
     private static final long TTL_MS = 24L * 60 * 60 * 1000;
+
+    /**
+     * begin 里那次顺手清理的期限：12 小时，比 sweep() 的 24 小时短一截。
+     * 为什么不是"全删"：上一份分享出去的文件可能正被外部播放器读着
+     * （A 分享给播放器、再分享 B —— 无条件清空就把 A 正在读的副本抽走了，
+     * 播放器那边表现为"文件没了"）。所以只清**明显过期**的，最近这几小时的不动。
+     */
+    private static final long CLEAR_TTL_MS = 12L * 60 * 60 * 1000;
 
     private File target = null;      // 正在收的那一份
     private OutputStream os = null;
@@ -99,13 +108,21 @@ public class SharePlugin extends Plugin {
         sweep();
     }
 
-    /** 把上一次留下的副本连同目录整个删掉。删不掉也不算错，下次 begin 还会再试。 */
+    /**
+     * 清一批过期的副本（按时间清，不是清空）。删不掉也不算错，下次 begin 还会再试。
+     * ⚠️ 只删 lastModified 早于 CLEAR_TTL_MS 的：用户刚分享出去的那份
+     *    很可能还在别的播放器里读着，删了就是"文件没了"。
+     */
     private void clearOld() {
         closeQuietly();
         File d = shareDir();
         File[] fs = d.listFiles();
-        if (fs != null) {
-            for (File f : fs) {
+        if (fs == null) return;
+        long now = System.currentTimeMillis();
+        for (File f : fs) {
+            // 本次正在用的那份不动（同名覆盖时可能就是它自己）
+            if (target != null && f.equals(target)) continue;
+            if (now - f.lastModified() > CLEAR_TTL_MS) {
                 //noinspection ResultOfMethodCallIgnored
                 f.delete();
             }

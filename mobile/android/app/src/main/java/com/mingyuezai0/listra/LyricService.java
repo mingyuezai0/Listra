@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
@@ -229,8 +230,12 @@ public class LyricService extends Service {
                     if (!moved && Math.abs(dx) + Math.abs(dy) < dp(6)) return true;
                     moved = true;
                     try {
-                        lp.x = winX + (int) dx;
-                        lp.y = winY + (int) dy;
+                        // ⚠️ 必须夹边界：窗口带 FLAG_LAYOUT_NO_LIMITS，不夹就能整块拖出屏幕，
+                        //    松手之后再也抓不回来（连那颗 × 都在屏幕外）。
+                        int sw = getResources().getDisplayMetrics().widthPixels;
+                        int sh = getResources().getDisplayMetrics().heightPixels;
+                        lp.x = clamp(winX + (int) dx, viewW(), sw);
+                        lp.y = clamp(winY + (int) dy, viewH(), sh);
                         wm.updateViewLayout(root, lp);
                     } catch (Exception ex){}
                     return true;
@@ -323,6 +328,53 @@ public class LyricService extends Service {
 
     private int dp(int v){
         return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    /** 窗口实际占的宽。WRAP_CONTENT 时 lp.width 是 -2，得问 view 自己。 */
+    private int viewW(){
+        if (lp != null && lp.width > 0) return lp.width;
+        if (root != null) return root.getWidth() > 0 ? root.getWidth() : root.getMeasuredWidth();
+        return 0;
+    }
+
+    /** 同上，高。 */
+    private int viewH(){
+        if (lp != null && lp.height > 0) return lp.height;
+        if (root != null) return root.getHeight() > 0 ? root.getHeight() : root.getMeasuredHeight();
+        return 0;
+    }
+
+    /**
+     * 把坐标夹到"窗口至少留 1/3 在屏幕里"。size 是窗口自身宽/高，screen 是屏幕宽/高。
+     * 留 1/3 是为了拖到边上还能一把抓回来；整块消失的窗口用户没法找回。
+     */
+    private static int clamp(int v, int size, int screen) {
+        if (size <= 0 || screen <= 0) return v;          // 还没量出来，先不夹
+        int keep = Math.max(1, size / 3);
+        int min = -(size - keep);                        // 左边/上边出去多少还剩 1/3
+        int max = screen - keep;                         // 右边/下边出去多少还剩 1/3
+        if (max < min) return min;                       // 窗口比屏幕还宽：贴一边算了
+        return Math.max(min, Math.min(max, v));
+    }
+
+    /**
+     * 转屏。窗口带 FLAG_LAYOUT_NO_LIMITS，而且 lp.y 是按**建窗那一刻**的屏幕高度算的：
+     * 竖屏开着再转横屏，那个 y 就落到屏幕外面去了 —— 表现是"歌词不见了"。
+     * 这里按新屏幕重算一次（保持靠下不贴底那个相对位置），再夹一遍。
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        try {
+            if (root == null || lp == null || wm == null) return;
+            int sw = getResources().getDisplayMetrics().widthPixels;
+            int sh = getResources().getDisplayMetrics().heightPixels;
+            lp.y = clamp((int) (sh * 0.62), viewH(), sh);   // 和 addOverlay 里同一个 0.62
+            lp.x = clamp(lp.x, viewW(), sw);
+            wm.updateViewLayout(root, lp);
+        } catch (Exception e){
+            // 转屏这一下没摆好不该崩；浮窗还在，用户还能拖
+        }
     }
 
     @Override
